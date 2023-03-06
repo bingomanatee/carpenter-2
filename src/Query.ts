@@ -1,12 +1,23 @@
-import { BaseObj, QueryDefObj, QueryObj, SelectorObj, TableItem, TableObj } from './types'
+import {
+  BaseObj, identityMap,
+  JoinItem,
+  JoinObj,
+  QueryDefObj,
+  QueryJoinDefObj,
+  QueryObj,
+  SelectorObj,
+  TableItem,
+  TableObj
+} from './types'
 import { TableItemClass } from './TableItemClass'
 import { collectObj } from '@wonderlandlabs/collect/lib/types'
 import { c } from '@wonderlandlabs/collect'
 
 
-export default class Query implements QueryObj{
+export default class Query implements QueryObj {
 
-  constructor(public base: BaseObj, private queryDef: QueryDefObj) {}
+  constructor(public base: BaseObj, private queryDef: QueryDefObj) {
+  }
 
   get table(): TableObj | undefined {
     return this.base.table(this.queryDef.table);
@@ -35,22 +46,66 @@ export default class Query implements QueryObj{
         for (const selector of this.selectors) {
           coll = this.applySelector(selector, coll);
         }
+
         this._value = coll.values;
       } else {
         this._value = table.$coll.keys.map((identity) => new TableItemClass(table, identity))
       }
+
+      if (this.queryDef.joins) {
+
+        this.queryDef.joins?.forEach((joinDef: QueryJoinDefObj) => {
+          if (Array.isArray(this._value)) {
+            this.applyJoinDef(this._value, joinDef)
+          }
+        })
+      }
     }
+
     return this._value;
   }
 
-   applySelector(selector: SelectorObj, coll: collectObj): collectObj {
+  applyJoinDef(items: TableItem[], joinDef: QueryJoinDefObj) {
+    console.log('looking for', joinDef.name);
+    const joinItem = this.table?.joins.get(joinDef.name);
+    if (!joinItem) {
+      throw new Error(`cannot retrieve join ${joinDef.name} from ${this.table?.name || '<missing table>'}`);
+    }
+
+    items?.forEach((ts, index) => {
+
+      let ids: unknown[];
+      let table: TableObj;
+
+      if (joinItem.direction === 'from') {
+        table = joinItem.join.toTable
+        ids = joinItem.join.fromIdentities(ts.identity)
+      } else {
+        table = joinItem.join.fromTable
+        ids = joinItem.join.toIdentities(ts.identity)
+      }
+
+      if (!ids.length) {
+        return;
+      }
+
+      if (!ts.joins) {
+        ts.joins = new Map();
+      }
+      ts.joins.set(joinDef.name,
+        ids.map((identity: unknown) => new TableItemClass(table, identity)));
+    })
+  }
+
+  applySelector(selector: SelectorObj, coll: collectObj):
+    collectObj {
     if (typeof selector === 'function') {
-       coll.map((item: TableItem) => {
+      coll.map((item: TableItem) => {
         return new TableItemClass(
           item.table,
           item.identity,
           selector(item)
-          );
+        );
       });
       return coll;
     } else if ('sort' in selector) {
@@ -62,7 +117,7 @@ export default class Query implements QueryObj{
       const out = new Map<unknown, TableItem>()
       let index = -1;
 
-      for(const [identity, t] of coll.iter) {
+      for (const [identity, t] of coll.iter) {
         const tItem = t as TableItem
         index += 1;
         if (
@@ -72,7 +127,7 @@ export default class Query implements QueryObj{
           continue;
         }
         if (typeof selector.until === 'number'
-          && index >= selector.until){
+          && index >= selector.until) {
           continue;
         }
         if (typeof selector.filter === 'function'

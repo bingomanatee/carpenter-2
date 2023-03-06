@@ -1,4 +1,4 @@
-import { TableObj } from './types'
+import { joinsMap, TableObj } from './types'
 
 export class TableItemClass {
   constructor(public readonly table: TableObj, public readonly identity: unknown, private _value?: unknown) {
@@ -18,4 +18,24 @@ export class TableItemClass {
   get exists() {
     return this.table.has(this.identity)
   }
+
+  public joins?: joinsMap
+
+  static toJSON(tc: TableItemClass) {
+    return {
+      table: tc.table.name,
+      value: tc.value,
+      identity: tc.identity,
+      joins: m2s(tc.joins)
+    }
+  }
+}
+
+function m2s(joins: unknown) {
+  if (joins instanceof Map) {
+    const out: Record<string, any> = {};
+    joins.forEach((item, key) => out[`${key}`] = item.map(TableItemClass.toJSON));
+    return out;
+  }
+  return null;
 }

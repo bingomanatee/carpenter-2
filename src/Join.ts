@@ -1,6 +1,6 @@
 import {
   BaseObj,
-  dataMap,
+  dataMap, identityMap,
   isFieldDef,
   isJoinIdentityDef,
   isKeygenDef,
@@ -13,20 +13,17 @@ import {
 import { collectObj } from '@wonderlandlabs/collect/lib/types'
 import { c } from '@wonderlandlabs/collect'
 
-function inverse(midKeys: unknown[], reverseIndex: dataMap, table: TableObj) {
+function recordsForMidKeys(midKeys: unknown[], reverseIndex: dataMap, table: TableObj) {
   const map = new Map();
   midKeys.forEach((midKey) => {
-    if (!reverseIndex.has(midKey)) {
-      return;
+    if (reverseIndex.has(midKey)) {
+      const endIdentity = reverseIndex.get(midKey);
+      endIdentity.forEach((endId: unknown) => {
+        if (!map.has(endId) && table.has(endId)) {
+          map.set(endId, table.get(endId));
+        }
+      })
     }
-    const endIdentity = reverseIndex.get(midKey);
-
-    endIdentity.forEach((endId: unknown) => {
-      if (!map.has(endId) && table.has(endId)) {
-        map.set(endId, table.get(endId));
-      }
-    })
-
   });
 
   return map;
@@ -140,10 +137,6 @@ export default class Join implements JoinObj {
     return this.base.table(this.fromDef.table) ?? (() => {
       throw(`cannot find table ${this.fromDef.table}`)
     })()
-  }
-
-  get fromColl() {
-    return this.fromTable?.$coll || emptyColl
   }
 
   get toTable(): TableObj {
@@ -279,7 +272,51 @@ export default class Join implements JoinObj {
       midKeys = this.fromIndex.get(identity);
     }
 
-    return midKeys.length ? inverse(midKeys, this.toIndexReverse, this.toTable) : emptyMap
+    return midKeys.length ? recordsForMidKeys(midKeys, this.toIndexReverse, this.toTable) : emptyMap
+  }
+
+  fromIdentities(identity: unknown): unknown[] {
+    if (!this.fromIndex.has(identity)) {
+      return [];
+    }
+    const midKeys = this.fromIndex.get(identity);
+    let identities = midKeys.map((midId: unknown) => this.toIndexReverse.get(midId) || []).flat();
+    const idSet = new Set(identities);
+    return Array.from(idSet.values());
+  }
+
+  from(identities: unknown[]): identityMap {
+    const out = new Map();
+
+    identities.forEach((id) => {
+      const identities = this.fromIdentities(id);
+      if (identities.length) {
+        out.set(id, identities)
+      }
+    });
+
+    return out;
+  }
+
+  toIdentities(identity: unknown): unknown[] {
+    if (!this.toIndex.has(identity)) return [];
+    const midKeys = this.toIndex.get(identity);
+    let identities = midKeys.map((midId: unknown) => this.fromIndexReverse.get(midId) || []).flat();
+    const idSet = new Set(identities);
+    return Array.from(idSet.values());
+  }
+
+  to(identities: unknown[]): identityMap {
+    const out = new Map();
+
+    identities.forEach((id) => {
+      const toIds = this.toIdentities(id);
+      if (toIds.length) {
+        out.set(id, toIds)
+      }
+    });
+
+    return out;
   }
 
   toRecordsForArray(fromIdentity: unknown): unknown[] {
@@ -307,7 +344,7 @@ export default class Join implements JoinObj {
       midKeys = this.toIndex.get(identity);
     }
 
-    return midKeys.length ? inverse(midKeys, this.fromIndexReverse, this.fromTable) : emptyMap
+    return midKeys.length ? recordsForMidKeys(midKeys, this.fromIndexReverse, this.fromTable) : emptyMap
   }
 
   fromRecordsForArray(toIdentity: unknown): unknown[] {

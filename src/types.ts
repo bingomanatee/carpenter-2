@@ -42,8 +42,14 @@ export interface TableObj {
   name: string,
   base: BaseObj
   coll: collectObj // a clone of the record collection
-  has(identity: unknown): boolean
   identityFor: identityFn
+  size: number
+  readonly joins: Map<string, JoinItem>
+  // these are internal operations, not to be called externally
+  $records: dataMap
+  readonly $coll: collectObj
+  $testRecord: tableRecordTestFn
+  has(identity: unknown): boolean
   recordFor(data: unknown, identity?: unknown): unknown
   add(data: unknown, identity?: unknown): void
   update(identity: unknown, data: unknown): void
@@ -53,14 +59,8 @@ export interface TableObj {
   getMany(identities: unknown[]): dataMap;
   getRecords(identities: unknown[]): unknown[];
   generate(gen: recordGenerator, exclusive?: boolean): unknown
-  size: number
   forEach(en: enumerator): void
-
-  // these are internal operations, not to be called externally
-  $records: dataMap
-  readonly $coll: collectObj
   $set(identity: unknown, record: unknown): void
-  $testRecord: tableRecordTestFn
   $testTable(): unknown
   getItem(identity: unknown): TableItem
   addJoin(join: JoinObj, direction?: joinDirection): void
@@ -83,10 +83,10 @@ export interface TypedTableObj<IdentityType, RecordType> extends TableObj {
 }
 
 export interface BaseObj {
-  table(name: string): TableObj | undefined
-  has(name: string, identity?: unknown): boolean
   readonly trans: transactionSet
   readonly joins: Map<string, JoinObj>
+  table(name: string): TableObj | undefined
+  has(name: string, identity?: unknown): boolean
   addJoin(config: JoinConfig): void
   query(queryDef: QueryDefObj): QueryObj
 }
@@ -125,6 +125,9 @@ export type JoinConfig = {
   intrinsic?: boolean
 }
 
+export type joinsMap = Map<string, TableItem[]>
+export type identityMap = Map<unknown, unknown[]>
+
 export interface JoinObj {
   name: string
   fromTable: TableObj,
@@ -134,6 +137,10 @@ export interface JoinObj {
   fromRecordsFor(toIdentity: unknown): dataMap,
   fromRecordsForArray(fromIdentity: unknown): unknown[],
   purgeIndexes(): void,
+  fromIdentities(identity: unknown) : unknown[],
+  toIdentities(identity: unknown) : unknown[],
+  from(identities: unknown[]) : identityMap,
+  to(identities: unknown[]): identityMap,
 }
 
 export function isJoin(arg: unknown): arg is JoinObj {
@@ -151,7 +158,7 @@ export type TableItem = {
   readonly identity: unknown,
   readonly exists: boolean,
   readonly table: TableObj,
-  readonly joins?: Map<string, TableItem[]>,
+  joins?: Map<string, TableItem[]>,
 }
 
 export type TypedTableItem<RecordType, IdentityType> = TableItem & {
@@ -168,7 +175,7 @@ type SelectorChooserObj = {
   count?: number
 }
 
-export type tableItemComparator = (t1:TableItem, t2:TableItem) => number
+export type tableItemComparator = (t1: TableItem, t2: TableItem) => number
 
 type SelectorSorterObj = {
   sort: tableItemComparator
@@ -177,10 +184,17 @@ type SelectorSorterObj = {
 export type selectorMap = (item: TableItem) => unknown
 
 export type SelectorObj = SelectorChooserObj | SelectorSorterObj | selectorMap
+
+export type QueryJoinDefObj = {
+  name: string,
+  sel?: SelectorObj | SelectorObj[]
+}
+
 // @TODO: sort
 export type QueryDefObj = {
   table: string,
   sel?: SelectorObj | SelectorObj[]
+  joins?: QueryJoinDefObj[]
 }
 
 export type QueryObj = {

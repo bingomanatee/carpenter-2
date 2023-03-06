@@ -61,7 +61,8 @@ export const manyPeople = [
     last: 'Jones',
     gender: Gender.male,
     age: 20,
-    state: 'CA'
+    state: 'CA',
+    address: 210,
   },
   {
     id: 101,
@@ -77,7 +78,8 @@ export const manyPeople = [
     last: 'Jones',
     gender: Gender.female,
     age: 40,
-    state: 'OR'
+    state: 'OR',
+    address: 290,
   },
   {
     id: 103,
@@ -85,7 +87,8 @@ export const manyPeople = [
     last: 'Smith',
     gender: Gender.male,
     age: 20,
-    state: 'CA'
+    state: 'CA',
+    address: 280,
   },
   {
     id: 104,
@@ -93,7 +96,8 @@ export const manyPeople = [
     last: 'Smith',
     gender: Gender.female,
     age: 30,
-    state: 'OR'
+    state: 'OR',
+    address: 270,
   },
   {
     id: 105,
@@ -101,7 +105,8 @@ export const manyPeople = [
     last: 'Jones',
     gender: Gender.male,
     age: 40,
-    state: 'WA'
+    state: 'WA',
+    address: 260,
   },
   {
     id: 106,
@@ -109,7 +114,8 @@ export const manyPeople = [
     last: 'Smith',
     gender: Gender.male,
     age: 25,
-    state: 'CA'
+    state: 'CA',
+    address: 250,
   },
   {
     id: 107,
@@ -117,7 +123,8 @@ export const manyPeople = [
     last: 'Jones',
     gender: Gender.male,
     age: 35,
-    state: 'WA'
+    state: 'WA',
+    address: 240,
   },
   {
     id: 108,
@@ -125,7 +132,8 @@ export const manyPeople = [
     last: 'Smith',
     gender: Gender.female,
     age: 45,
-    state: 'WA'
+    state: 'WA',
+    address: 230,
   },
   {
     id: 109,
@@ -133,9 +141,11 @@ export const manyPeople = [
     last: 'Jones',
     gender: Gender.male,
     age: 50,
-    state: 'OR'
+    state: 'OR',
+    address: 220,
   },
 ];
+
 
 export const addressUsers = [
   {
@@ -159,6 +169,71 @@ export const addressUsers = [
   }
 ]
 
+export const manyAddresses =  [
+  {
+    id: 210,
+    address: '1000 First Avenue',
+    city: 'San Francisco',
+    state: 'CA',
+    zip: 11135
+  },
+  {
+    id: 220,
+    address: '3317 NE 15th',
+    city: 'Portland',
+    state: 'OR',
+    zip: 97205
+  },
+  {
+    id: 230,
+    address: '1010 Simi Valley Dr',
+    city: 'Simi Valley',
+    state: 'CA',
+    zip: 93065
+  },
+  {
+    id: 240,
+    address: '666 Buffalo Avenue',
+    city: 'San Francisco',
+    state: 'CA',
+    zip: 11135
+  },
+  {
+    id: 250,
+    address: '101 Multnomah Avenue',
+    city: 'Portland',
+    state: 'OR',
+    zip: 97205
+  },
+  {
+    id: 260,
+    address: '444 Simi Valley Dr',
+    city: 'Simi Valley',
+    state: 'CA',
+    zip: 93065
+  },
+  {
+    id: 270,
+    address: '1000 Harrison St',
+    city: 'San Francisco',
+    state: 'CA',
+    zip: 98403
+  },
+  {
+    id: 280,
+    address: '400 4th Ave',
+    city: 'Portland',
+    state: 'OR',
+    zip: 97205
+  },
+  {
+    id: 290,
+    address: '44 Los Angeles Dr',
+    city: 'Simi Valley',
+    state: 'CA',
+    zip: 93065
+  }
+];
 export type AddressRecord = {
   id: number,
   address: string,
@@ -178,14 +253,14 @@ export const addresses: AddressRecord[] = [
     address: '1000 First Avenue',
     city: 'San Francisco',
     state: 'CA',
-    zip: 11135
+    zip: 94103
   },
   {
     id: 20,
     address: '3317 NE 15th',
     city: 'Portland',
     state: 'OR',
-    zip: 94103
+    zip: 97205
   },
   {
     id: 30,
