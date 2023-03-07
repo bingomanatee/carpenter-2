@@ -1,6 +1,5 @@
 import { transactionSet } from '@wonderlandlabs/transact/dist/types'
 import { collectObj, generalObj } from '@wonderlandlabs/collect/lib/types'
-import Query from './Query'
 
 export type tableConfig = {
   name: string
@@ -54,6 +53,7 @@ export interface TableObj {
   add(data: unknown, identity?: unknown): void
   update(identity: unknown, data: unknown): void
   updateMany(records: unknown[] | dataMap): void
+  setField(identity: unknown, field: unknown, value: unknown): void
   delete(identity: unknown): void
   get(identity: unknown): unknown
   getMany(identities: unknown[]): dataMap;
@@ -64,6 +64,8 @@ export interface TableObj {
   $testTable(): unknown
   getItem(identity: unknown): TableItem
   addJoin(join: JoinObj, direction?: joinDirection): void
+  joinFromTerm(term: JoinTerm): JoinItem | null
+  join(identity: unknown, term: JoinTerm): void;
 }
 
 export type JoinItem = {
@@ -83,12 +85,12 @@ export interface TypedTableObj<IdentityType, RecordType> extends TableObj {
 }
 
 export interface BaseObj {
-  readonly trans: transactionSet
-  readonly joins: Map<string, JoinObj>
-  table(name: string): TableObj | undefined
-  has(name: string, identity?: unknown): boolean
-  addJoin(config: JoinConfig): void
-  query(queryDef: QueryDefObj): QueryObj
+  readonly trans: transactionSet,
+  readonly joins: Map<string, JoinObj>,
+  table(name: string): TableObj | undefined,
+  has(name: string, identity?: unknown): boolean,
+  addJoin(config: JoinConfig): void,
+  query(queryDef: QueryDefObj): QueryObj,
 }
 
 type BaseJoinDef = {
@@ -102,18 +104,28 @@ export type JoinKeygenDef = {
 type JoinIdentityDef = { identity: true }
 
 export function isJoinIdentityDef(arg: unknown): arg is JoinIdentityDef {
-  const target = arg as generalObj
-  return target.identity === true;
+  return !!(
+    arg
+    && typeof arg === 'object'
+    && 'identity' in arg
+  );
 }
 
 export function isKeygenDef(arg: unknown): arg is JoinKeygenDef {
-  const target = arg as generalObj
-  return 'keyDef' in target && (typeof target.keyDef === 'function')
+  return !!(
+    arg
+    && typeof arg === 'object'
+    && 'keyDef' in arg
+    && typeof arg.keyDef === 'function'
+  );
 }
 
 export function isFieldDef(arg: unknown): arg is JoinFieldDef {
-  const target = arg as generalObj
-  return 'field' in target;
+  return !!(
+    arg
+    && typeof arg === 'object'
+    && 'field' in arg
+  );
 }
 
 export type JoinDef = BaseJoinDef & (JoinFieldDef | JoinKeygenDef | JoinIdentityDef)
@@ -125,26 +137,50 @@ export type JoinConfig = {
   intrinsic?: boolean
 }
 
+export type joinStrategy = 'field-field' | 'field-identity' | 'identity-field' | 'identity-identity'
+
+export function isJoinTermJoinNameBase(arg: unknown): arg is JoinTermJoinNameBase {
+  return !!(arg && typeof arg === 'object' && 'joinName' in arg);
+}
+
+export function isJoinTermTableNameBase(arg: unknown): arg is JoinTermTableNameBase {
+  return !!(arg && typeof arg === 'object' && 'tableName' in arg);
+}
+
+type JoinTermJoinNameBase = { joinName: string }
+type JoinTermTableNameBase = { tableName: string }
+type JoinTermBase = JoinTermJoinNameBase | JoinTermTableNameBase;
+type JoinTermTargetBase = { identity: unknown, data?: unknown } | { identity?: unknown, data: unknown }
+
+export type JoinTerm = JoinTermBase & JoinTermTargetBase;
+
 export type joinsMap = Map<string, TableItem[]>
 export type identityMap = Map<unknown, unknown[]>
+
+export type JoinObjType = 'JoinObj';
 
 export interface JoinObj {
   name: string
   fromTable: TableObj,
   toTable: TableObj,
+  $type: JoinObjType,
   toRecordsFor(fromIdentity: unknown): dataMap,
   toRecordsForArray(fromIdentity: unknown): unknown[],
   fromRecordsFor(toIdentity: unknown): dataMap,
   fromRecordsForArray(fromIdentity: unknown): unknown[],
   purgeIndexes(): void,
-  fromIdentities(identity: unknown) : unknown[],
-  toIdentities(identity: unknown) : unknown[],
-  from(identities: unknown[]) : identityMap,
+  fromIdentities(identity: unknown): unknown[],
+  toIdentities(identity: unknown): unknown[],
+  from(identities: unknown[]): identityMap,
   to(identities: unknown[]): identityMap,
+  link(id1: unknown, id2: unknown): void,
 }
 
 export function isJoin(arg: unknown): arg is JoinObj {
-  return true
+  return !!(arg
+    && typeof arg === 'object'
+    && '$type' in arg
+    && arg.$type === 'JoinObj');
 }
 
 export interface JoinPair {
@@ -186,11 +222,11 @@ export type selectorMap = (item: TableItem) => unknown
 export type SelectorObj = SelectorChooserObj | SelectorSorterObj | selectorMap
 
 export type QueryJoinDefObj = {
-  name: string,
+  joinName: string,
   sel?: SelectorObj | SelectorObj[]
+  joins?: QueryJoinDefObj[]
 }
 
-// @TODO: sort
 export type QueryDefObj = {
   table: string,
   sel?: SelectorObj | SelectorObj[]
@@ -199,5 +235,7 @@ export type QueryDefObj = {
 
 export type QueryObj = {
   value: TableItem[],
-  base: BaseObj
+  base: BaseObj,
+  toJSON: Record<string, unknown>[]
 }
+

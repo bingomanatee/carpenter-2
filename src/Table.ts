@@ -4,7 +4,7 @@ import {
   creatorFn,
   dataMap,
   enumerator,
-  identityConfigFn, joinDirection, JoinItem, JoinObj,
+  identityConfigFn, isJoinTermJoinNameBase, isJoinTermTableNameBase, joinDirection, JoinItem, JoinObj, JoinTerm,
   mutatorFn,
   recordGenerator,
   recordTestFn,
@@ -132,6 +132,14 @@ export default class Table implements TableObj {
 
   public updateMany(data: unknown[] | generalObj, restrict?: boolean) {
     this.trans.do('updateMany', data, this, restrict);
+  }
+
+  public setField(identity: unknown, field: unknown, value: unknown) {
+    this.trans.do('setField', this, identity, field, value);
+  }
+
+  public join(identity: unknown, joinTerm: JoinTerm) {
+    this.trans.do('join', this, identity, joinTerm);
   }
 
   public delete(identity: unknown) {
@@ -272,4 +280,53 @@ export default class Table implements TableObj {
   getItem(identity: unknown): TableItem {
     return new TableItemClass(this, identity)
   }
+
+  joinFromTerm(term: JoinTerm): JoinItem | null {
+    let join: JoinObj | null = null;
+    let direction: joinDirection | null = null;
+    if (isJoinTermJoinNameBase(term)) {
+      const joinItem = this.joins.get(term.joinName);
+      if (joinItem) {
+        direction = joinItem.direction;
+        join = joinItem.join;
+      }
+    } else if (isJoinTermTableNameBase(term)) {
+      // @TODO: detect self-joins
+      const {tableName} = term;
+      console.log('looking for a join to ', tableName);
+      // requesting a match to the other side of the JoinTerm
+      let matches = Array.from(this.joins.values()).filter((joinItem: JoinItem) => {
+        return joinItem.join.fromTable.name === tableName
+          || joinItem.join.toTable.name === tableName;
+      });
+
+      console.log('matches:', matches);
+      switch (matches.length) {
+        case 0:
+          throw new Error(`no matching joins for ${tableName}`);
+          break;
+        case 1:
+          join = matches[0].join;
+          direction = matches[0].direction
+          break;
+        default:
+          throw new Error(`multiple matches between ${this.name} and ${tableName}`);
+      }
+    }
+    if (!join) {
+      throw new Error('cannot find join');
+    }
+    if (!direction) {
+      if (join.fromTable.name === this.name) {
+        direction = 'from';
+      } else if (join.toTable.name === this.name) {
+        direction = 'to';
+      } else {
+        throw new Error('bad joinFromTerm table');
+      }
+    }
+    console.log('joinFromTerm returning ', direction, 'join', join);
+    return { join, direction }
+  }
+
 }

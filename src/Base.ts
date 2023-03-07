@@ -1,4 +1,14 @@
-import { BaseObj, contextConfig, JoinConfig, JoinObj, QueryDefObj, QueryObj, TableObj } from './types'
+import {
+  BaseObj,
+  contextConfig,
+  JoinConfig,
+  joinDirection, JoinItem,
+  JoinObj,
+  JoinTerm,
+  QueryDefObj,
+  QueryObj,
+  TableObj
+} from './types'
 import Table from './Table'
 import { TransactionSet } from '@wonderlandlabs/transact'
 import { transactionSet } from '@wonderlandlabs/transact/dist/types'
@@ -62,7 +72,7 @@ export class Base implements BaseObj {
     join.toTable?.addJoin(join, 'to');
   }
 
-  query(def: QueryDefObj) : QueryObj {
+  query(def: QueryDefObj): QueryObj {
     return new Query(this, def);
   }
 }

@@ -1,5 +1,5 @@
 import {
-  BaseObj, identityMap,
+  BaseObj, identityMap, JoinDef,
   JoinItem,
   JoinObj,
   QueryDefObj,
@@ -19,10 +19,6 @@ export default class Query implements QueryObj {
   constructor(public base: BaseObj, private queryDef: QueryDefObj) {
   }
 
-  get table(): TableObj | undefined {
-    return this.base.table(this.queryDef.table);
-  }
-
   get selectors(): SelectorObj[] {
     if (!this.queryDef.sel) {
       return [];
@@ -36,13 +32,12 @@ export default class Query implements QueryObj {
   private _value?: TableItem[]
   get value() {
     if (!this._value) {
-      const table = this.table;
+      const table = this.base.table(this.queryDef.table);
       if (!table) {
         return [];
       }
-      if (this.table && this.selectors.length) {
-        const table = this.table;
-        let coll = this.table.coll.map((_value, identity) => new TableItemClass(table, identity));
+      if (this.selectors.length) {
+        let coll = table.coll.map((_value, identity) => new TableItemClass(table, identity));
         for (const selector of this.selectors) {
           coll = this.applySelector(selector, coll);
         }
@@ -66,10 +61,13 @@ export default class Query implements QueryObj {
   }
 
   applyJoinDef(items: TableItem[], joinDef: QueryJoinDefObj) {
-    console.log('looking for', joinDef.name);
-    const joinItem = this.table?.joins.get(joinDef.name);
+    if (!items.length) {
+      return;
+    }
+
+    const joinItem = items[0].table.joins.get(joinDef.joinName);
     if (!joinItem) {
-      throw new Error(`cannot retrieve join ${joinDef.name} from ${this.table?.name || '<missing table>'}`);
+      throw new Error(`cannot retrieve join ${joinDef.joinName} from ${items[0].table.name || '<missing table>'}`);
     }
 
     items?.forEach((ts, index) => {
@@ -89,16 +87,34 @@ export default class Query implements QueryObj {
         return;
       }
 
+      let joinedItems = ids.map((identity: unknown) => new TableItemClass(table, identity));
+
+      if (joinDef.sel) {
+        const selectors = Array.isArray(joinDef.sel) ? joinDef.sel : [joinDef.sel];
+        let coll = c(joinedItems).reduce((memo: Map<unknown, TableItem>, item: TableItem) => {
+          memo.set(item.identity, item);
+        }, new Map());
+
+        selectors.forEach((selector) => {
+          coll = this.applySelector(selector, coll);
+        });
+        joinedItems = coll.values;
+      }
+
+      if (joinDef.joins) {
+        joinDef.joins.forEach((join: QueryJoinDefObj) => {
+          this.applyJoinDef(joinedItems, join);
+        });
+      }
+
       if (!ts.joins) {
         ts.joins = new Map();
       }
-      ts.joins.set(joinDef.name,
-        ids.map((identity: unknown) => new TableItemClass(table, identity)));
+      ts.joins.set(joinDef.joinName, joinedItems);
     })
   }
 
-  applySelector(selector: SelectorObj, coll: collectObj):
-    collectObj {
+  applySelector(selector: SelectorObj, coll: collectObj): collectObj {
     if (typeof selector === 'function') {
       coll.map((item: TableItem) => {
         return new TableItemClass(
@@ -141,6 +157,10 @@ export default class Query implements QueryObj {
       }
       return c(out);
     }
+  }
+
+  get toJSON() {
+    return this.value.map(TableItemClass.toJSON);
   }
 }
 

@@ -6,8 +6,8 @@ import {
   isKeygenDef,
   JoinConfig,
   JoinDef, JoinFieldDef, JoinKeygenDef,
-  JoinObj,
-  JoinPair,
+  JoinObj, JoinObjType,
+  JoinPair, joinStrategy,
   TableObj
 } from './types'
 import { collectObj } from '@wonderlandlabs/collect/lib/types'
@@ -72,6 +72,8 @@ export default class Join implements JoinObj {
 
   constructor(private config: JoinConfig, private base: BaseObj) {
   }
+
+  $type: JoinObjType = 'JoinObj';
 
   private _name?: string
   get name() {
@@ -256,6 +258,55 @@ export default class Join implements JoinObj {
     }
   }
 
+  get strategy(): joinStrategy {
+    if (isFieldDef(this.fromDef)) {
+      if (isFieldDef(this.toDef)) {
+        return 'field-field';
+      }
+      return 'field-identity';
+    } else if (isFieldDef(this.toDef)) {
+      return 'identity-field'
+    }
+    return 'identity-identity'
+  }
+
+  link(fromIdentity: unknown, toIdentity: unknown) {
+    if (!(this.fromTable.has(fromIdentity) && this.toTable.has(toIdentity))) {
+      throw new Error(`cannot link ${fromIdentity} and ${toIdentity}`);
+    }
+
+    console.log('linking ', fromIdentity, 'of ', this.fromTable.name, 'to', toIdentity, 'from', this.toTable.name);
+    switch (this.strategy) {
+      case 'field-identity':
+        if (isFieldDef(this.fromDef)) {
+          this.fromTable.setField(fromIdentity, this.fromDef.field, toIdentity);
+        }
+        break
+
+      case 'identity-field':
+        if (isFieldDef(this.toDef)) {
+          this.toTable.setField(toIdentity, this.toDef.field, fromIdentity);
+        }
+        break;
+
+      case 'identity-identity':
+        if (fromIdentity !== toIdentity) {
+          throw new Error('cannot link id-id relationships');
+        }
+        break;
+
+      case 'field-field':
+        if (isFieldDef(this.fromDef) && isFieldDef(this.toDef)) {
+          const c1 = c(this.fromTable.get(fromIdentity));
+          const c2 = c(this.toTable.get(toIdentity));
+          if (c1.get(this.fromDef.field) !== c2.get(this.toDef.field)) {
+            throw new Error('cannot link field-field relationships');
+          }
+        }
+        break;
+    }
+  }
+
   toRecordsFor(identity: unknown): dataMap {
 
     let midKeys: unknown[];
@@ -299,7 +350,9 @@ export default class Join implements JoinObj {
   }
 
   toIdentities(identity: unknown): unknown[] {
-    if (!this.toIndex.has(identity)) return [];
+    if (!this.toIndex.has(identity)) {
+      return [];
+    }
     const midKeys = this.toIndex.get(identity);
     let identities = midKeys.map((midId: unknown) => this.fromIndexReverse.get(midId) || []).flat();
     const idSet = new Set(identities);

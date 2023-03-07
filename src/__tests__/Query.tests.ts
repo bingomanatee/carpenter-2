@@ -311,7 +311,6 @@ describe('Queries', () => {
           return { id: user.id, gender: user.gender, age: user.age };
         });
 
-        console.log('users', users);
         expect(users).toEqual([
           { id: 102, gender: 'female', age: 40 },
           { id: 104, gender: 'female', age: 30 },
@@ -327,7 +326,7 @@ describe('Queries', () => {
     it('should join related records', () => {
       const query = base.query({
         table: 'users',
-        joins: [{ name: 'userAddresses' }],
+        joins: [{ joinName: 'userAddresses' }],
         sel: { count: 4 }
       });
 
@@ -413,15 +412,524 @@ describe('Queries', () => {
           }
         }]);
     });
+
+    it('should join in other direction', () => {
+      const query = base.query({
+        table: 'states',
+        joins: [{ joinName: 'addressStates' }]
+      });
+
+      const values = query.value.map(TableItemClass.toJSON);
+
+      expect(values).toEqual(
+        [{
+          "table": "states",
+          "value": { "abbr": "CA", "label": "California" },
+          "identity": "CA",
+          "joins": {
+            "addressStates": [{
+              "table": "addresses",
+              "value": {
+                "id": 210,
+                "address": "1000 First Avenue",
+                "city": "San Francisco",
+                "state": "CA",
+                "zip": 11135
+              },
+              "identity": 210,
+              "joins": null
+            }, {
+              "table": "addresses",
+              "value": {
+                "id": 230,
+                "address": "1010 Simi Valley Dr",
+                "city": "Simi Valley",
+                "state": "CA",
+                "zip": 93065
+              },
+              "identity": 230,
+              "joins": null
+            }, {
+              "table": "addresses",
+              "value": {
+                "id": 240,
+                "address": "666 Buffalo Avenue",
+                "city": "San Francisco",
+                "state": "CA",
+                "zip": 11135
+              },
+              "identity": 240,
+              "joins": null
+            }, {
+              "table": "addresses",
+              "value": {
+                "id": 260,
+                "address": "444 Simi Valley Dr",
+                "city": "Simi Valley",
+                "state": "CA",
+                "zip": 93065
+              },
+              "identity": 260,
+              "joins": null
+            }, {
+              "table": "addresses",
+              "value": {
+                "id": 270,
+                "address": "1000 Harrison St",
+                "city": "San Francisco",
+                "state": "CA",
+                "zip": 98403
+              },
+              "identity": 270,
+              "joins": null
+            }, {
+              "table": "addresses",
+              "value": {
+                "id": 290,
+                "address": "44 Los Angeles Dr",
+                "city": "Simi Valley",
+                "state": "CA",
+                "zip": 93065
+              },
+              "identity": 290,
+              "joins": null
+            }]
+          }
+        }, {
+          "table": "states",
+          "value": { "abbr": "OR", "label": "Oregon" },
+          "identity": "OR",
+          "joins": {
+            "addressStates": [{
+              "table": "addresses",
+              "value": { "id": 220, "address": "3317 NE 15th", "city": "Portland", "state": "OR", "zip": 97205 },
+              "identity": 220,
+              "joins": null
+            }, {
+              "table": "addresses",
+              "value": {
+                "id": 250,
+                "address": "101 Multnomah Avenue",
+                "city": "Portland",
+                "state": "OR",
+                "zip": 97205
+              },
+              "identity": 250,
+              "joins": null
+            }, {
+              "table": "addresses",
+              "value": { "id": 280, "address": "400 4th Ave", "city": "Portland", "state": "OR", "zip": 97205 },
+              "identity": 280,
+              "joins": null
+            }]
+          }
+        }, { "table": "states", "value": { "abbr": "WA", "label": "Washington" }, "identity": "WA", "joins": null }]
+      );
+    });
+
+    it('should allow deep joins', () => {
+      const query = base.query({
+        table: 'users',
+        joins: [{ joinName: 'userAddresses', joins: [{ joinName: 'addressStates' }] }],
+        sel: { count: 4 }
+      });
+
+      const values = query.value.map(TableItemClass.toJSON);
+
+      expect(values).toEqual(
+        [{
+          "table": "users",
+          "value": {
+            "name": "Alpha",
+            "gender": "male",
+            "id": 100,
+            "last": "Jones",
+            "age": 20,
+            "state": "CA",
+            "address": 210
+          },
+          "identity": 100,
+          "joins": {
+            "userAddresses": [{
+              "table": "addresses",
+              "value": {
+                "id": 210,
+                "address": "1000 First Avenue",
+                "city": "San Francisco",
+                "state": "CA",
+                "zip": 11135
+              },
+              "identity": 210,
+              "joins": {
+                "addressStates": [{
+                  "table": "states",
+                  "value": { "abbr": "CA", "label": "California" },
+                  "identity": "CA",
+                  "joins": null
+                }]
+              }
+            }]
+          }
+        }, {
+          "table": "users",
+          "value": { "name": "Beta", "gender": "male", "id": 101, "last": "Smith", "age": 30, "state": "CA" },
+          "identity": 101,
+          "joins": null
+        }, {
+          "table": "users",
+          "value": {
+            "name": "Gamma",
+            "gender": "female",
+            "id": 102,
+            "last": "Jones",
+            "age": 40,
+            "state": "OR",
+            "address": 290
+          },
+          "identity": 102,
+          "joins": {
+            "userAddresses": [{
+              "table": "addresses",
+              "value": {
+                "id": 290,
+                "address": "44 Los Angeles Dr",
+                "city": "Simi Valley",
+                "state": "CA",
+                "zip": 93065
+              },
+              "identity": 290,
+              "joins": {
+                "addressStates": [{
+                  "table": "states",
+                  "value": { "abbr": "CA", "label": "California" },
+                  "identity": "CA",
+                  "joins": null
+                }]
+              }
+            }]
+          }
+        }, {
+          "table": "users",
+          "value": {
+            "name": "Delta",
+            "gender": "male",
+            "id": 103,
+            "last": "Smith",
+            "age": 20,
+            "state": "CA",
+            "address": 280
+          },
+          "identity": 103,
+          "joins": {
+            "userAddresses": [{
+              "table": "addresses",
+              "value": { "id": 280, "address": "400 4th Ave", "city": "Portland", "state": "OR", "zip": 97205 },
+              "identity": 280,
+              "joins": {
+                "addressStates": [{
+                  "table": "states",
+                  "value": { "abbr": "OR", "label": "Oregon" },
+                  "identity": "OR",
+                  "joins": null
+                }]
+              }
+            }]
+          }
+        }]
+      );
+    });
+
+    it('should deep join in other direction', () => {
+      const query = base.query({
+        table: 'states',
+        joins: [{
+          joinName: 'addressStates',
+          joins: [
+            { joinName: 'userAddresses' }
+          ]
+        }]
+      });
+      expect(query.toJSON).toEqual(
+        [{
+          "table": "states", "value": { "abbr": "CA", "label": "California" }, "identity": "CA", "joins": {
+            "addressStates": [{
+              "table": "addresses",
+              "value": {
+                "id": 210,
+                "address": "1000 First Avenue",
+                "city": "San Francisco",
+                "state": "CA",
+                "zip": 11135
+              },
+              "identity": 210,
+              "joins": {
+                "userAddresses": [{
+                  "table": "users",
+                  "value": {
+                    "name": "Alpha",
+                    "gender": "male",
+                    "id": 100,
+                    "last": "Jones",
+                    "age": 20,
+                    "state": "CA",
+                    "address": 210
+                  },
+                  "identity": 100,
+                  "joins": null
+                }]
+              }
+            }, {
+              "table": "addresses",
+              "value": {
+                "id": 230,
+                "address": "1010 Simi Valley Dr",
+                "city": "Simi Valley",
+                "state": "CA",
+                "zip": 93065
+              },
+              "identity": 230,
+              "joins": {
+                "userAddresses": [{
+                  "table": "users",
+                  "value": {
+                    "name": "Kappa",
+                    "gender": "female",
+                    "id": 108,
+                    "last": "Smith",
+                    "age": 45,
+                    "state": "WA",
+                    "address": 230
+                  },
+                  "identity": 108,
+                  "joins": null
+                }]
+              }
+            }, {
+              "table": "addresses",
+              "value": {
+                "id": 240,
+                "address": "666 Buffalo Avenue",
+                "city": "San Francisco",
+                "state": "CA",
+                "zip": 11135
+              },
+              "identity": 240,
+              "joins": {
+                "userAddresses": [{
+                  "table": "users",
+                  "value": {
+                    "name": "Iota",
+                    "gender": "male",
+                    "id": 107,
+                    "last": "Jones",
+                    "age": 35,
+                    "state": "WA",
+                    "address": 240
+                  },
+                  "identity": 107,
+                  "joins": null
+                }]
+              }
+            }, {
+              "table": "addresses",
+              "value": {
+                "id": 260,
+                "address": "444 Simi Valley Dr",
+                "city": "Simi Valley",
+                "state": "CA",
+                "zip": 93065
+              },
+              "identity": 260,
+              "joins": {
+                "userAddresses": [{
+                  "table": "users",
+                  "value": {
+                    "name": "Zeta",
+                    "gender": "male",
+                    "id": 105,
+                    "last": "Jones",
+                    "age": 40,
+                    "state": "WA",
+                    "address": 260
+                  },
+                  "identity": 105,
+                  "joins": null
+                }]
+              }
+            }, {
+              "table": "addresses",
+              "value": {
+                "id": 270,
+                "address": "1000 Harrison St",
+                "city": "San Francisco",
+                "state": "CA",
+                "zip": 98403
+              },
+              "identity": 270,
+              "joins": {
+                "userAddresses": [{
+                  "table": "users",
+                  "value": {
+                    "name": "Epsilon",
+                    "gender": "female",
+                    "id": 104,
+                    "last": "Smith",
+                    "age": 30,
+                    "state": "OR",
+                    "address": 270
+                  },
+                  "identity": 104,
+                  "joins": null
+                }]
+              }
+            }, {
+              "table": "addresses",
+              "value": {
+                "id": 290,
+                "address": "44 Los Angeles Dr",
+                "city": "Simi Valley",
+                "state": "CA",
+                "zip": 93065
+              },
+              "identity": 290,
+              "joins": {
+                "userAddresses": [{
+                  "table": "users",
+                  "value": {
+                    "name": "Gamma",
+                    "gender": "female",
+                    "id": 102,
+                    "last": "Jones",
+                    "age": 40,
+                    "state": "OR",
+                    "address": 290
+                  },
+                  "identity": 102,
+                  "joins": null
+                }]
+              }
+            }]
+          }
+        }, {
+          "table": "states",
+          "value": { "abbr": "OR", "label": "Oregon" },
+          "identity": "OR",
+          "joins": {
+            "addressStates": [{
+              "table": "addresses",
+              "value": { "id": 220, "address": "3317 NE 15th", "city": "Portland", "state": "OR", "zip": 97205 },
+              "identity": 220,
+              "joins": {
+                "userAddresses": [{
+                  "table": "users",
+                  "value": {
+                    "name": "Lambda",
+                    "gender": "male",
+                    "id": 109,
+                    "last": "Jones",
+                    "age": 50,
+                    "state": "OR",
+                    "address": 220
+                  },
+                  "identity": 109,
+                  "joins": null
+                }]
+              }
+            }, {
+              "table": "addresses",
+              "value": {
+                "id": 250,
+                "address": "101 Multnomah Avenue",
+                "city": "Portland",
+                "state": "OR",
+                "zip": 97205
+              },
+              "identity": 250,
+              "joins": {
+                "userAddresses": [{
+                  "table": "users",
+                  "value": {
+                    "name": "Eta",
+                    "gender": "male",
+                    "id": 106,
+                    "last": "Smith",
+                    "age": 25,
+                    "state": "CA",
+                    "address": 250
+                  },
+                  "identity": 106,
+                  "joins": null
+                }]
+              }
+            }, {
+              "table": "addresses",
+              "value": { "id": 280, "address": "400 4th Ave", "city": "Portland", "state": "OR", "zip": 97205 },
+              "identity": 280,
+              "joins": {
+                "userAddresses": [{
+                  "table": "users",
+                  "value": {
+                    "name": "Delta",
+                    "gender": "male",
+                    "id": 103,
+                    "last": "Smith",
+                    "age": 20,
+                    "state": "CA",
+                    "address": 280
+                  },
+                  "identity": 103,
+                  "joins": null
+                }]
+              }
+            }]
+          }
+        }, { "table": "states", "value": { "abbr": "WA", "label": "Washington" }, "identity": "WA", "joins": null }]
+      );
+    });
+
+    describe('link', () => {
+
+      it('should allow you to link in new data', () => {
+
+        const base = makeBase([{ id: 1, gender: Gender.male, name: 'Bob' }], westCoast, []);
+        const userTable = base.table('users');
+        if (!userTable) {
+          throw new Error('no user table');
+        }
+
+        userTable.join(1, {
+          tableName: 'addresses',
+          data: {
+            id: 10,
+            address: '1000 11th Ave',
+            city: 'Seattle',
+            state: 'WA',
+            zip: 10133
+          }
+        });
+
+        console.log('user modified:', userTable.get(1));
+
+        const userWithAddr = base.query({
+          table: 'users',
+          joins: [{ joinName: 'userAddresses' }]
+        });
+
+        expect(userWithAddr.toJSON).toEqual([{
+            "table": "users",
+            "value": { "name": "Bob", "gender": "male", "id": 1, "address": 10 },
+            "identity": 1,
+            "joins": {
+              "userAddresses": [{
+                "table": "addresses",
+                "value": { "id": 10, "address": "1000 11th Ave", "city": "Seattle", "state": "WA", "zip": 10133 },
+                "identity": 10,
+                "joins": null
+              }]
+            }
+          }]
+        );
+      });
+    });
   });
-
 });
-
-function m2s(joins: unknown) {
-  if (joins instanceof Map) {
-    const out: Record<string, any> = {};
-    joins.forEach((item, key) => out[`${key}`] = item);
-    return out;
-  }
-  return null;
-}
