@@ -1,5 +1,6 @@
 import { BaseObj, TableObj, TypedTableObj } from './types'
 import { Base } from './Base'
+import { v4 } from 'uuid'
 import { c } from '@wonderlandlabs/collect'
 
 export enum Gender {
@@ -169,7 +170,7 @@ export const addressUsers = [
   }
 ]
 
-export const manyAddresses =  [
+export const manyAddresses = [
   {
     id: 210,
     address: '1000 First Avenue',
@@ -302,7 +303,7 @@ export const makeBase = (
     tables: [
       {
         name: 'addresses',
-        identity: 'id',
+        identityFromRecord: 'id',
         onCreate(data): AddressRecord {
           if (!isAddressRecord(data)) {
             throw new Error('value must be data record');
@@ -315,7 +316,7 @@ export const makeBase = (
       // without and ID and auto-generated
       {
         name: 'users',
-        identity(record, table) {
+        identityFromRecord(record, table) {
           const users = record as UsersRecord
           if (users.id) {
             return users.id;
@@ -338,7 +339,7 @@ export const makeBase = (
             throw new Error('cannot rename users record');
           }
           if (obj.id && obj.id !== previousUsers.id) {
-            throw new Error('cannot change the identity of a record')
+            throw new Error('cannot change the identityFromRecord of a record')
           }
 
           return { ...previousUsers, ...obj }
@@ -361,7 +362,7 @@ export const makeBase = (
       },
       {
         name: 'states',
-        identity: 'abbr',
+        identityFromRecord: 'abbr',
         records: states,
         testRecord(data) {
           if ((!data) || typeof data !== 'object') {
@@ -385,7 +386,7 @@ export const makeBase = (
           const prevState = previous as StateRecord
           const obj = data as GenericRecord
           if (obj.abbr && obj.abbr !== prevState.abbr) {
-            throw new Error('cannot change the identity of a record')
+            throw new Error('cannot change the identityFromRecord of a record')
           }
 
           return { ...prevState, ...obj }
@@ -401,3 +402,4 @@ export const makeBase = (
     ]
   })
 )
+

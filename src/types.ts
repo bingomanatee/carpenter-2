@@ -1,15 +1,21 @@
 import { transactionSet } from '@wonderlandlabs/transact/dist/types'
 import { collectObj, generalObj } from '@wonderlandlabs/collect/lib/types'
 
-export type tableConfig = {
-  name: string
+export type BaseTableConfig = {
   onCreate?: creatorFn
   onUpdate?: mutatorFn
   testRecord?: recordTestFn
   testTable?: tableTestFn
-  identity?: string | identityConfigFn
+  identityFromRecord?: string | identityConfigFn
   records?: unknown[] | StringKeyRecord
 }
+
+export function isTableConfig(arg: unknown) : arg is TableConfig {
+  return !!(arg && typeof arg === 'object' && 'name' in arg)
+}
+export type TableConfig = {
+  name: string
+} & BaseTableConfig
 
 export type recordGenerator = (table: TableObj) => Generator<any, any, any>
 export type recordSetGenerator = (record: unknown, id: unknown) => Generator<any, any, any>
@@ -23,9 +29,9 @@ export type mutatorFn = (data: unknown, table: TableObj, current: unknown) => un
 export type identityFn = (data: unknown) => unknown
 export type identityConfigFn = (data: unknown, table: TableObj) => unknown
 export type dataMap = Map<any, any>
-export type contextConfig = {
-  joins?: any
-  tables?: tableConfig[]
+export type BaseConfig = {
+  joins?: JoinConfig[] | Record<string, JoinConfig>
+  tables?: TableConfig[] | Record<string, BaseTableConfig>
 }
 
 export type StringKeyRecord = Record<string, unknown>
@@ -34,7 +40,7 @@ export type joinDirection = 'from' | 'to';
 
 /**
  * note - 'data' is a raw value; but when added with add/update,
- * it is processed by recordFor into the proper type, i.e., a value that
+ * it is processed by processData into the proper type, i.e., a value that
  * can survive testRecord
  */
 export interface TableObj {
@@ -49,23 +55,25 @@ export interface TableObj {
   readonly $coll: collectObj
   $testRecord: tableRecordTestFn
   has(identity: unknown): boolean
-  recordFor(data: unknown, identity?: unknown): unknown
+  processData(data: unknown, identity?: unknown): unknown
   add(data: unknown, identity?: unknown): void
   update(identity: unknown, data: unknown): void
-  updateMany(records: unknown[] | dataMap): void
+  updateMany(records: unknown[] | dataMap): dataMap
   setField(identity: unknown, field: unknown, value: unknown): void
   delete(identity: unknown): void
   get(identity: unknown): unknown
   getMany(identities: unknown[]): dataMap;
   getRecords(identities: unknown[]): unknown[];
   generate(gen: recordGenerator, exclusive?: boolean): unknown
-  forEach(en: enumerator): void
-  $set(identity: unknown, record: unknown): void
-  $testTable(): unknown
   getItem(identity: unknown): TableItem
   addJoin(join: JoinObj, direction?: joinDirection): void
-  joinFromTerm(term: JoinTerm): JoinItem | null
   join(identity: unknown, term: JoinTerm): void;
+  forEach(en: enumerator): void
+  query(queryDef: TableQueryDefObj): QueryObj;
+
+  $set(identity: unknown, record: unknown): void
+  $testTable(): unknown
+  $joinFromTerm(term: JoinTerm): JoinItem | null
 }
 
 export type JoinItem = {
@@ -76,11 +84,11 @@ export type JoinItem = {
 export interface TypedTableObj<IdentityType, RecordType> extends TableObj {
   identityFor: ((data: unknown) => IdentityType)
   has(identity: IdentityType): boolean
-  recordFor(data: unknown, identity?: unknown): RecordType
+  processData(data: unknown, identity?: unknown): RecordType
   get(identity: IdentityType): RecordType | undefined
   $set(identity: IdentityType, record: RecordType): void
   add(data: unknown, identity?: IdentityType): void
-  updateMany(records: RecordType[] | Map<IdentityType, RecordType>, restrict?: boolean): void
+  updateMany(records: RecordType[] | Map<IdentityType, RecordType>, restrict?: boolean): Map<IdentityType, RecordType>
   getItem(identity: IdentityType): TypedTableItem<RecordType, IdentityType>
 }
 
@@ -134,7 +142,7 @@ export type JoinConfig = {
   from: string | JoinDef
   to: string | JoinDef
   name?: string
-  intrinsic?: boolean
+  via?: boolean | string
 }
 
 export type joinStrategy = 'field-field' | 'field-identity' | 'identity-field' | 'identity-identity'
@@ -150,7 +158,55 @@ export function isJoinTermTableNameBase(arg: unknown): arg is JoinTermTableNameB
 type JoinTermJoinNameBase = { joinName: string }
 type JoinTermTableNameBase = { tableName: string }
 type JoinTermBase = JoinTermJoinNameBase | JoinTermTableNameBase;
-type JoinTermTargetBase = { identity: unknown, data?: unknown } | { identity?: unknown, data: unknown }
+
+type JoinTermIdentityDataBase = { identity: unknown, data: unknown }
+export function isJoinTermIdentityDataBase(arg: unknown): arg is JoinTermIdentityDataBase {
+  return !!(arg
+    && typeof arg === 'object'
+    && 'identity' in arg
+    && 'data' in arg
+  );
+}
+
+type JoinTermDataBase = { data: unknown }
+export function isJoinTermDataBase(arg: unknown): arg is JoinTermIdentityDataBase {
+  return !!(arg
+    && typeof arg === 'object'
+    && 'data' in arg
+  );
+}
+
+type JoinTermIdentityBase = { identity: unknown }
+
+export function isJoinTermIdentityBase(arg: unknown): arg is JoinTermIdentityBase {
+  return !!(arg
+    && typeof arg === 'object'
+    && 'identity' in arg
+  );
+}
+
+type JoinTermDatasBase = { datas: unknown[] }
+export function isJoinTermDatasBase(arg: unknown): arg is JoinTermDatasBase {
+  return !!(arg
+    && typeof arg === 'object'
+    && 'datas' in arg
+    && Array.isArray(arg.datas)
+  );
+}
+type JoinTermDataPairsBase = { dataPairs: unknown[] }
+export function isJoinTermDataPairsBase(arg: unknown): arg is JoinTermDataPairsBase {
+  return !!(arg
+    && typeof arg === 'object'
+    && 'dataPairs' in arg
+    && (Array.isArray(arg.dataPairs) || arg.dataPairs instanceof Map)
+  );
+}
+
+type JoinTermTargetBase = JoinTermIdentityDataBase
+  | JoinTermDataBase
+  | JoinTermIdentityBase
+  | JoinTermDatasBase
+  | JoinTermDataPairsBase
 
 export type JoinTerm = JoinTermBase & JoinTermTargetBase;
 
@@ -174,6 +230,9 @@ export interface JoinObj {
   from(identities: unknown[]): identityMap,
   to(identities: unknown[]): identityMap,
   link(id1: unknown, id2: unknown): void,
+  linkMany(fromIdentity: unknown, dataItems: unknown[] | dataMap,
+           direction: joinDirection,
+           isPairs?: boolean) : void
 }
 
 export function isJoin(arg: unknown): arg is JoinObj {
@@ -184,8 +243,8 @@ export function isJoin(arg: unknown): arg is JoinObj {
 }
 
 export interface JoinPair {
-  from: unknown, // from records identity
-  to: unknown,  // to records identity
+  from: unknown, // from records identityFromRecord
+  to: unknown,  // to records identityFromRecord
 }
 
 export type TableItem = {
@@ -227,11 +286,13 @@ export type QueryJoinDefObj = {
   joins?: QueryJoinDefObj[]
 }
 
-export type QueryDefObj = {
-  table: string,
+export type TableQueryDefObj = {
   sel?: SelectorObj | SelectorObj[]
   joins?: QueryJoinDefObj[]
 }
+export type QueryDefObj = {
+  table: string,
+} & TableQueryDefObj
 
 export type QueryObj = {
   value: TableItem[],

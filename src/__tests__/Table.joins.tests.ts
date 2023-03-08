@@ -11,10 +11,10 @@ describe('Table', () => {
     const addressStates = base.joins.get('addressStates');
 
     if (!isJoin(userAddresses)) {
-      throw new Error('cannot get address join');
+      throw new Error('cannot get address linkVia');
     }
     if (!isJoin(addressStates)) {
-      throw new Error('cannot get states join');
+      throw new Error('cannot get states linkVia');
     }
 
     describe('toRecordsForArray', () => {

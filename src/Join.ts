@@ -5,7 +5,7 @@ import {
   isJoinIdentityDef,
   isKeygenDef,
   JoinConfig,
-  JoinDef, JoinFieldDef, JoinKeygenDef,
+  JoinDef, joinDirection, JoinFieldDef, JoinKeygenDef,
   JoinObj, JoinObjType,
   JoinPair, joinStrategy,
   TableObj
@@ -52,10 +52,12 @@ function extractKeyGenDef(def: JoinKeygenDef, record: unknown, identity: unknown
   const iter = def.keyGen(record, identity);
   let done = false;
   const out: any[] = [];
+
   do {
     const { value, done: isDone } = iter.next();
     done = !!isDone;
-    if (isDone) {
+
+    if (done) {
       break;
     }
 
@@ -70,8 +72,7 @@ function extractKeyGenDef(def: JoinKeygenDef, record: unknown, identity: unknown
 
 export default class Join implements JoinObj {
 
-  constructor(private config: JoinConfig, private base: BaseObj) {
-  }
+  constructor(private config: JoinConfig, private base: BaseObj) {}
 
   $type: JoinObjType = 'JoinObj';
 
@@ -152,7 +153,7 @@ export default class Join implements JoinObj {
   }
 
   /**
-   * fromIndex is a map of the record identity to the exposed key
+   * fromIndex is a map of the record identityFromRecord to the exposed key
    * that matches an exposed key in toIndex.
    */
   _fromIndex?: dataMap
@@ -247,8 +248,8 @@ export default class Join implements JoinObj {
    * @param fromIdentity
    * @param toIdentity
    */
-  join(fromIdentity: unknown, toIdentity: unknown) {
-    if (!this.config.intrinsic) {
+  linkVia(fromIdentity: unknown, toIdentity: unknown) {
+    if (!this.config.via) {
       throw new Error(`cannot join records for non-intrinsic relationship ${this.name}`);
     }
     const link: JoinPair = { from: fromIdentity, to: toIdentity }
@@ -270,12 +271,47 @@ export default class Join implements JoinObj {
     return 'identity-identity'
   }
 
+  linkMany(fromIdentity: unknown,
+           dataItems: unknown[] | dataMap,
+           direction: joinDirection,
+           isPairs = false) {
+    const table = direction === 'from' ? this.fromTable : this.toTable;
+    const config = direction === 'from' ? this.fromDef : this.toDef;
+    if (!isFieldDef(config)) {
+      throw new Error('linkMany must target field type');
+    }
+    const fieldName = config.field;
+    if (direction === 'from') {
+      if (this.strategy !== 'identity-field') {
+        throw new Error('cannot link many with this linkVia');
+      }
+    } else {
+      if (this.strategy !== 'field-identity') {
+        throw new Error('cannot link many with this linkVia');
+      }
+    }
+
+    this.base.trans.do('withBackedUpTables', [this.fromTable.name, this.toTable.name],
+      () => {
+        if (isPairs) {
+          let source = Array.isArray(dataItems) ? new Map(dataItems) : dataItems;
+          table.updateMany(c(source).getMap((data: unknown) => c(data).set(fieldName, fromIdentity).value));
+        } else if (Array.isArray(dataItems)) {
+          dataItems = dataItems.map((data) => {
+            return c(data).set(fieldName, fromIdentity).value;
+          });
+          table.updateMany(dataItems);
+        } else {
+          throw new Error('bad data');
+        }
+      });
+  }
+
   link(fromIdentity: unknown, toIdentity: unknown) {
     if (!(this.fromTable.has(fromIdentity) && this.toTable.has(toIdentity))) {
       throw new Error(`cannot link ${fromIdentity} and ${toIdentity}`);
     }
 
-    console.log('linking ', fromIdentity, 'of ', this.fromTable.name, 'to', toIdentity, 'from', this.toTable.name);
     switch (this.strategy) {
       case 'field-identity':
         if (isFieldDef(this.fromDef)) {

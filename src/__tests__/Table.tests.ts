@@ -12,7 +12,7 @@ import {
 
 describe('Table', () => {
   describe('add()', () => {
-    it('applies identity to records and rejects bad records', () => {
+    it('applies identityFromRecord to records and rejects bad records', () => {
 
       const base = makeBase();
 
@@ -96,7 +96,7 @@ describe('Table', () => {
       ).toEqual(new Set(['Cali', 'Ore']))
     });
 
-    it ('deletes undefined records', () => {
+    it('deletes undefined records', () => {
       const base = makeBase(bobAndSue, westCoast)
       const userTable = base.table('users') as UserTable
 
@@ -126,16 +126,28 @@ describe('Table', () => {
         }, new Set())).toEqual(new Set(['Washington', 'California', 'Oregon']))
     });
 
+    it('returns values', () => {
+      const base = makeBase([], westCoast)
+
+      const stateBase = base.table('states') as StateTable
+      let output = stateBase.updateMany([{ abbr: 'CA', label: 'Cali' }, { abbr: 'OR', label: 'Ore' }])
+
+      expect(output).toEqual(new Map([
+        ['CA', { abbr: 'CA', label: 'Cali' }],
+        ['OR', { abbr: 'OR', label: 'Ore' }]
+      ]));
+    });
+
   });
   describe('generate', () => {
     it('updates existing records', () => {
       const base = makeBase([], westCoast)
       const userTable = base.table('users') as UserTable
-      userTable.generate(function *gen(table: TableObj) {
+      userTable.generate(function* gen(table: TableObj) {
         for (const [$identity, value] of table.coll.iter) {
           const record = value as UsersRecord
           if (!('age' in record && record.age && record.age >= 18)) {
-            yield {$record: {...record, age: 18}, $identity}
+            yield { $record: { ...record, age: 18 }, $identity }
           }
         }
       })
@@ -150,14 +162,14 @@ describe('Table', () => {
       const base = makeBase(bobAndSue, westCoast)
       const statesTable = base.table('states') as StateTable
 
-      statesTable.generate(function *gen(table: TableObj) {
+      statesTable.generate(function* gen(table: TableObj) {
         const userTable = table.base.table('users') as UserTable
         for (const [_id, value] of userTable.coll.iter) {
           const record = value as UsersRecord
           const identity = record.state
           if (identity && table.has(identity)) {
             const state = table.get(identity)
-            yield {$record: state, $identity: identity}
+            yield { $record: state, $identity: identity }
           }
         }
       }, true);

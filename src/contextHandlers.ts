@@ -1,5 +1,14 @@
 import { transObj } from '@wonderlandlabs/transact/dist/types'
-import { dataMap, JoinItem, JoinTerm, TableObj } from './types'
+import {
+  BaseObj,
+  dataMap,
+  isJoinTermDataBase, isJoinTermDataPairsBase,
+  isJoinTermDatasBase, isJoinTermIdentityBase,
+  isJoinTermIdentityDataBase,
+  JoinItem,
+  JoinTerm,
+  TableObj
+} from './types'
 import { c } from '@wonderlandlabs/collect';
 
 function toError(err: unknown, defaultMessage = 'error') {
@@ -25,16 +34,7 @@ const revertRecordChange = (_err: unknown, trans: transObj) => {
   }
   throw _err;
 }
-const restoreTable = (_err: unknown, trans: transObj) => {
-  if (!trans.meta.get('recordsChanged')) {
-    throw _err
-  }
-  if (trans.meta.has('table')) {
-    const table: TableObj = trans.meta.get('table');
-    table.$records = trans.meta.get('records');
-  }
-  throw _err;
-}
+
 
 const backupRecord = (trans: transObj, table: TableObj, identity: unknown) => {
   trans.meta.set('table', table)
@@ -43,19 +43,34 @@ const backupRecord = (trans: transObj, table: TableObj, identity: unknown) => {
   trans.meta.set('previous', previous);
 }
 
-const backUpTable = (trans: transObj, table: TableObj) => {
-  trans.meta.set('table', table);
-  trans.meta.set('records', c(table.$records).clone().value);
-  trans.meta.set('recordsChanged', true);
+const backUpTable = (trans: transObj, table: TableObj | TableObj[]) => {
+  if (!Array.isArray(table)) {
+    backUpTable(trans, [table]);
+  } else {
+    trans.meta.set('backedUpTables', table.map((table) => {
+      return {
+        table,
+        records: c(table.$records).clone().value
+      }
+    }));
+  }
 }
-
-export const contextHandlers = (() => {
+const restoreTable = (_err: unknown, trans: transObj) => {
+  const backups = trans.meta.get('backedUpTables')
+  if (Array.isArray(backups)) {
+    backups.forEach(({ table, records }) => {
+      table.$records = records;
+    });
+  }
+  throw _err;
+}
+export const contextHandlers = ((base: BaseObj) => {
     return {
       add: [
         (trans: transObj, table: TableObj, data: unknown, identity?: unknown, replace?: boolean) => {
           let record: unknown;
           if (identity === undefined) {
-            record = table.recordFor(data);
+            record = table.processData(data);
             identity = table.identityFor(record);
             if (identity === undefined) {
               throw Object.assign(new Error('add: cannot add unidentified record to table ' + table.name),
@@ -68,13 +83,13 @@ export const contextHandlers = (() => {
           }
 
           if (table.has(identity) && !replace) {
-            throw Object.assign(new Error('add: cannot assert data over existing identity unless replace = true'), {
+            throw Object.assign(new Error('add: cannot assert data over existing identityFromRecord unless replace = true'), {
               identity,
               table: table.name
             })
           }
           if (record === undefined) {
-            record = table.recordFor(data, identity);
+            record = table.processData(data, identity);
           }
           trans.meta.set('recordExists', table.has(identity));
           backupRecord(trans, table, identity)
@@ -106,7 +121,7 @@ export const contextHandlers = (() => {
                 table: table.name
               })
           }
-          const record = table.recordFor(data, identity);
+          const record = table.processData(data, identity);
           trans.meta.set('recordExists', table.has(identity));
           backupRecord(trans, table, identity)
           trans.transactionSet.do('validateRecord', record, identity, table, trans.meta.get('previous'));
@@ -122,7 +137,7 @@ export const contextHandlers = (() => {
           if (Array.isArray(data)) {
             recordMap = new Map();
             data.forEach(data => {
-              const record = table.recordFor(data);
+              const record = table.processData(data);
               const identity = table.identityFor(record);
               recordMap.set(identity, record);
             })
@@ -132,7 +147,7 @@ export const contextHandlers = (() => {
                 if (data === undefined) {
                   return undefined;
                 }
-                return table.recordFor(data, identity)
+                return table.processData(data, identity)
               });
           }
           backUpTable(trans, table)
@@ -151,8 +166,24 @@ export const contextHandlers = (() => {
           }
           trans.meta.set('changed', true);
           trans.transactionSet.do('validateTable', table);
+          return recordMap;
         },
         restoreTable
+      ],
+      withBackedUpTables: [
+        (trans: transObj, tableNames: string | string[], action: () => unknown) => {
+          const list = Array.isArray(tableNames) ? tableNames : [tableNames];
+          const tables = list.reduce((memo: TableObj[], name: string) => {
+            let newTable = base.table(name);
+            if (newTable) {
+              memo.push(newTable);
+            }
+            return memo;
+          }, []);
+          backUpTable(trans, tables);
+          action();
+        },
+        restoreTable,
       ],
       validateRecord(trans: transObj, record: unknown, identity: unknown, table: TableObj) {
         const error = table.$testRecord(record, identity);
@@ -191,34 +222,54 @@ export const contextHandlers = (() => {
         let remoteTable: TableObj
         let joinItem: JoinItem | null
 
-        joinItem = table.joinFromTerm(term)
+        joinItem = table.$joinFromTerm(term)
         if (!joinItem) {
-          throw Object.assign(new Error('cannot join with term'), { term, table, identity });
+          throw Object.assign(new Error('cannot linkVia with term'), { term, table, identity });
         }
 
         remoteTable = joinItem.direction === 'to' ? joinItem.join.fromTable : joinItem.join.toTable
 
-        let remoteIdentity = 'identity' in term ? term.identity : undefined;
+        let remoteIdentity: unknown = undefined;
 
         backUpTable(trans, remoteTable);
-        if (!term.identity) {
+        if (isJoinTermIdentityDataBase(term)) {
+          remoteIdentity = term.identity;
+          remoteTable.add(term.data, term.identity);
+
+          if (joinItem.direction === 'from') {
+            joinItem.join.link(identity, remoteIdentity);
+          } else {
+            joinItem.join.link(remoteIdentity, identity);
+          }
+        } else if (isJoinTermDataBase(term)) {
           remoteIdentity = remoteTable.identityFor(term.data);
           remoteTable.add(term.data, remoteIdentity);
-        } else {
-          if ('data' in term) {
-            remoteTable.add(term.data, remoteIdentity);
-          }
-        }
 
-        if (joinItem.direction === 'from') {
-          joinItem.join.link(identity, remoteIdentity);
+          if (joinItem.direction === 'from') {
+            joinItem.join.link(identity, remoteIdentity);
+          } else {
+            joinItem.join.link(remoteIdentity, identity);
+          }
+        } else if (isJoinTermIdentityBase(term)) {
+          remoteIdentity = term.identity;
+          if (!remoteTable.has(term.identity)) {
+            throw new Error(`cannot join -- table ${remoteTable.name} has no identity ${isJoinTermIdentityBase}`);
+          }
+
+          if (joinItem.direction === 'from') {
+            joinItem.join.link(identity, remoteIdentity);
+          } else {
+            joinItem.join.link(remoteIdentity, identity);
+          }
+        } else if (isJoinTermDatasBase(term)) {
+          joinItem.join.linkMany(identity, term.datas, joinItem.direction);
+        } else if (isJoinTermDataPairsBase(term)) {
+          joinItem.join.linkMany(identity, term.dataPairs, joinItem.direction, true);
         } else {
-          joinItem.join.link(remoteIdentity, identity);
+          throw new Error('bad term');
         }
       },
-        (err: Error, trans: transObj) => {
-          restoreTable(err, trans);
-        }
+        restoreTable
       ]
     }
   }

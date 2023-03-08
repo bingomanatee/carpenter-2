@@ -323,7 +323,7 @@ describe('Queries', () => {
   });
 
   describe('joins', () => {
-    it('should join related records', () => {
+    it('should linkVia related records', () => {
       const query = base.query({
         table: 'users',
         joins: [{ joinName: 'userAddresses' }],
@@ -413,7 +413,7 @@ describe('Queries', () => {
         }]);
     });
 
-    it('should join in other direction', () => {
+    it('should linkVia in other direction', () => {
       const query = base.query({
         table: 'states',
         joins: [{ joinName: 'addressStates' }]
@@ -639,7 +639,7 @@ describe('Queries', () => {
       );
     });
 
-    it('should deep join in other direction', () => {
+    it('should deep linkVia in other direction', () => {
       const query = base.query({
         table: 'states',
         joins: [{
@@ -907,8 +907,6 @@ describe('Queries', () => {
             zip: 10133
           }
         });
-
-        console.log('user modified:', userTable.get(1));
 
         const userWithAddr = base.query({
           table: 'users',

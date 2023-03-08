@@ -9,10 +9,9 @@ import {
   recordGenerator,
   recordTestFn,
   recordTestValue,
-  StringKeyRecord,
-  tableConfig,
+  StringKeyRecord, TableConfig,
   TableItem,
-  TableObj,
+  TableObj, TableQueryDefObj,
   tableTestFn
 } from './types'
 import { c } from '@wonderlandlabs/collect'
@@ -49,29 +48,29 @@ function strTest(value: unknown): false | identityConfigFn {
       return obj[value]
     }
   }
-  throw new Error('identity parser (if defined) must be string or function')
+  throw new Error('identityFromRecord parser (if defined) must be string or function')
 }
 
 export default class Table implements TableObj {
 
-  constructor(public base: BaseObj, config: tableConfig) {
+  constructor(public base: BaseObj, config: TableConfig) {
     this.name = config.name
     this._onCreate = config.onCreate || identityFn;
     this._onUpdate = config.onUpdate || this._onCreate;
-    this._identityFromRecord = strTest(config.identity) || identifierFn
+    this._identityFromRecord = strTest(config.identityFromRecord) || identifierFn
     this._testTable = config.testTable || falsyFn;
     this._testRecord = config.testRecord || falsyFn;
 
     if (config.records) {
       if (Array.isArray(config.records)) {
-        config.records.map((data) => this.recordFor(data))
-          .forEach((record) => {
+        config.records.map((data: unknown) => this.processData(data))
+          .forEach((record: unknown) => {
             const identity = this.identityFor(record);
             this.$set(identity, record)
           });
       } else {
         c(config.records)
-          .map((data, identity) => this.recordFor(data, identity))
+          .map((data, identity) => this.processData(data, identity))
           .forEach((record, identity) => {
             this.$set(record, identity)
           });
@@ -87,7 +86,7 @@ export default class Table implements TableObj {
   private _testRecord: recordTestFn
   private _testTable: tableTestFn
 
-  recordFor(data: unknown, identity?: unknown): unknown {
+  processData(data: unknown, identity?: unknown): unknown {
     if (identity && this.has(identity)) {
       return this._onUpdate(data, this, this.get(identity))
     }
@@ -131,7 +130,7 @@ export default class Table implements TableObj {
   }
 
   public updateMany(data: unknown[] | generalObj, restrict?: boolean) {
-    this.trans.do('updateMany', data, this, restrict);
+    return this.trans.do('updateMany', data, this, restrict);
   }
 
   public setField(identity: unknown, field: unknown, value: unknown) {
@@ -151,17 +150,23 @@ export default class Table implements TableObj {
   }
 
   /**
+   *
+   * generates a series of records to add or update in the collection
+   * either appends new records or replaces entire collection with generated output.
+   *
    * note - the generator must yield either
-   * array pairs [record, identity]
-   * object records {$record, $identity?}
-   * records (any other return value taken as a record)
+   *    array pairs [record, identityFromRecord]
+   *    object records {$record, $identityFromRecord?}
+   *    records (any other return value taken as a record)
+   *         --- if a record is generated, the table MUST have an identityFromRecord function
    *
    * that means if you want to return a record that _is_ an array
    * you must either wrap it in an array or return it
-   * as {$record: myArray, $identity: myKey}
+   * as {$record: myArray, $identityFromRecord: myKey}
    *
    * @param generator *(table) => iter
-   * @param replace
+   * @param replace {boolean} -- whether to add new data over current set
+   *                             or COMPLETELY replace collection with generated set
    */
   generate(generator: recordGenerator, replace = false) {
     const coll = this.$coll.cloneEmpty()
@@ -189,7 +194,7 @@ export default class Table implements TableObj {
         identity = this.identityFor(record)
         if (identity === undefined) {
           throw Object.assign(
-            new Error('generate -- undefined identity for record'),
+            new Error('generate -- undefined identityFromRecord for record'),
             { record, generator, table: this.name }
           )
         }
@@ -241,15 +246,23 @@ export default class Table implements TableObj {
     return this.$records.size;
   }
 
-  private get trans() {
-    return this.base.trans
-  }
-
   get coll() {
     return this.$coll.clone();
   }
 
+  getItem(identity: unknown): TableItem {
+    return new TableItemClass(this, identity)
+  }
+
+  query(queryDef: TableQueryDefObj) {
+    return this.base.query({table: this.name, ...queryDef});
+  }
+
   // ----- internal methods
+
+  private get trans() {
+    return this.base.trans
+  }
 
   private readonly _$coll = c(new Map());
 
@@ -277,11 +290,7 @@ export default class Table implements TableObj {
     return this._testTable(this);
   }
 
-  getItem(identity: unknown): TableItem {
-    return new TableItemClass(this, identity)
-  }
-
-  joinFromTerm(term: JoinTerm): JoinItem | null {
+  $joinFromTerm(term: JoinTerm): JoinItem | null {
     let join: JoinObj | null = null;
     let direction: joinDirection | null = null;
     if (isJoinTermJoinNameBase(term)) {
@@ -293,7 +302,7 @@ export default class Table implements TableObj {
     } else if (isJoinTermTableNameBase(term)) {
       // @TODO: detect self-joins
       const {tableName} = term;
-      console.log('looking for a join to ', tableName);
+      console.log('looking for a linkVia to ', tableName);
       // requesting a match to the other side of the JoinTerm
       let matches = Array.from(this.joins.values()).filter((joinItem: JoinItem) => {
         return joinItem.join.fromTable.name === tableName
@@ -314,7 +323,7 @@ export default class Table implements TableObj {
       }
     }
     if (!join) {
-      throw new Error('cannot find join');
+      throw new Error('cannot find linkVia');
     }
     if (!direction) {
       if (join.fromTable.name === this.name) {
@@ -322,11 +331,10 @@ export default class Table implements TableObj {
       } else if (join.toTable.name === this.name) {
         direction = 'to';
       } else {
-        throw new Error('bad joinFromTerm table');
+        throw new Error('bad $joinFromTerm table');
       }
     }
-    console.log('joinFromTerm returning ', direction, 'join', join);
+    console.log('$joinFromTerm returning ', direction, 'join', join);
     return { join, direction }
   }
-
 }

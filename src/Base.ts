@@ -1,13 +1,11 @@
 import {
   BaseObj,
-  contextConfig,
+  BaseConfig,
   JoinConfig,
-  joinDirection, JoinItem,
   JoinObj,
-  JoinTerm,
   QueryDefObj,
   QueryObj,
-  TableObj
+  TableObj, isTableConfig
 } from './types'
 import Table from './Table'
 import { TransactionSet } from '@wonderlandlabs/transact'
@@ -15,20 +13,28 @@ import { transactionSet } from '@wonderlandlabs/transact/dist/types'
 import { contextHandlers } from './contextHandlers'
 import Join from './Join'
 import Query from './Query'
+import { c } from '@wonderlandlabs/collect'
 
 export class Base implements BaseObj {
 
-  constructor(config: contextConfig) {
+  constructor(config: BaseConfig) {
     if (config.tables) {
-      config.tables.forEach((config) => {
-        const newTable = new Table(this, config);
-        this.tables.set(newTable.name, newTable)
+      c(config.tables).forEach((config, name) => {
+        if (isTableConfig(config)) {
+          this.tables.set(config.name, new Table(this, config));
+        } else {
+          this.tables.set(name, new Table(this, { ...config, name: name }));
+        }
       })
     }
 
     if (config.joins) {
-      config.joins.forEach((joinConfig: JoinConfig) => {
-        this.addJoin(joinConfig);
+      c(config.joins).forEach((joinConfig, name) => {
+        if (name && typeof name === 'string') {
+          this.addJoin({ ...joinConfig, name });
+        } else {
+          this.addJoin(joinConfig);
+        }
       })
     }
   }
@@ -39,7 +45,7 @@ export class Base implements BaseObj {
   get trans(): transactionSet {
     if (!this._trans) {
       this._trans = new TransactionSet({
-        handlers: contextHandlers()
+        handlers: contextHandlers(this)
       })
     }
     return this._trans
