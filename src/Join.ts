@@ -1,19 +1,20 @@
 import {
   BaseObj,
-  dataMap, identityMap,
+  dataMap,
+  identityMap,
   isFieldDef,
-  isJoinIdentityDef, isJoinTermTableNameBase,
+  isJoinIdentityDef,
   isScalar,
   JoinConfig,
-  JoinDef, joinDirection, JoinFieldDef,
-  JoinObj, JoinObjType,
-  JoinPair, joinStrategy,
+  JoinDef,
+  joinDirection,
+  JoinFieldDef,
+  JoinObj,
+  JoinObjType,
+  joinStrategy,
   TableObj
 } from './types'
-import { collectObj } from '@wonderlandlabs/collect/lib/types'
 import { c } from '@wonderlandlabs/collect'
-import { TableItemClass } from './TableItemClass'
-import { from } from 'rxjs'
 
 function recordsForMidKeys(midKeys: unknown[], reverseIndex: dataMap, table: TableObj) {
   const map = new Map();
@@ -29,6 +30,22 @@ function recordsForMidKeys(midKeys: unknown[], reverseIndex: dataMap, table: Tab
   });
 
   return map;
+}
+
+function addToIndex(map: dataMap, fromIndex: unknown, toIndex: unknown, isList?: boolean) {
+  if (isList && Array.isArray(toIndex)) {
+    toIndex.forEach((toItem) => addToIndex(map, fromIndex, toItem));
+    return;
+  }
+
+  if (!map.has(fromIndex)) {
+    map.set(fromIndex, [toIndex]);
+  } else {
+    const IDs = map.get(fromIndex);
+    if (!IDs.includes(toIndex)) {
+      IDs.push(toIndex);
+    }
+  }
 }
 
 function identitiesForMidKeys(midKeys: unknown[], reverseIndex: dataMap): unknown[] {
@@ -72,8 +89,9 @@ function parseConfig(config: string | JoinDef) {
   }
 }
 
-export default class Join implements JoinObj {
+// @TODO: put from / to relationships into manager classes
 
+export default class Join implements JoinObj {
   constructor(private config: JoinConfig, private base: BaseObj) {
   }
 
@@ -137,12 +155,19 @@ export default class Join implements JoinObj {
    */
   _fromIndex?: dataMap
   _fromIndexReverse?: dataMap
+  _fromIsIdentity?: boolean
+  private get fromIsIdentity() {
+    if (typeof this._fromIsIdentity !== 'boolean') {
+      this._fromIsIdentity = isJoinIdentityDef(this.fromDef);
+    }
+    return this._fromIsIdentity
+  }
 
   get fromIndex(): dataMap {
     if (!this._fromIndex) {
       this._fromIndex = this.fromTable.$coll.getMap((record, identity) => {
         let out: any[] = [];
-        if (isJoinIdentityDef(this.fromDef)) {
+        if (this.fromIsIdentity) {
           return [identity]
         } else if (isFieldDef(this.fromDef)) {
           out = extractFieldDef(this.fromDef, record);
@@ -155,35 +180,34 @@ export default class Join implements JoinObj {
 
   get fromIndexReverse(): dataMap {
     if (!this._fromIndexReverse) {
-      const coll = c(new Map());
+      const coll = new Map();
       this.fromIndex.forEach((keys, identity) => {
-        if (Array.isArray(keys)) {
-          keys.forEach((key) => {
-            if (coll.hasKey(key)) {
-              const identities: unknown[] = coll.get(key);
-              if (!identities.includes(identity)) {
-                identities.push(identity);
-              }
-            } else {
-              coll.set(key, [identity]);
-            }
-          })
-        }
+        keys.forEach((key: unknown) => {
+          addToIndex(coll, key, identity);
+        })
       });
-      this._fromIndexReverse = coll.value as dataMap;
+
+      this._fromIndexReverse = coll
     }
 
     return this._fromIndexReverse;
   }
 
-  _toIndex?: dataMap
-  _toIndexReverse?: dataMap
+  private _toIndex?: dataMap
+  private _toIndexReverse?: dataMap
+  private _toIsIdentity?: boolean
+  private get toIsIdentity() {
+    if (typeof this._toIsIdentity !== 'boolean') {
+      this._toIsIdentity = isJoinIdentityDef(this.toDef);
+    }
+    return this._toIsIdentity
+  }
 
   get toIndex(): dataMap {
     if (!this._toIndex) {
       this._toIndex = this.toTable.$coll.getMap((record, identity) => {
         let out: any[] = [];
-        if (isJoinIdentityDef(this.toDef)) {
+        if (this.toIsIdentity) {
           return [identity]
         } else if (isFieldDef(this.toDef)) {
           out = extractFieldDef(this.toDef, record);
@@ -196,23 +220,14 @@ export default class Join implements JoinObj {
 
   get toIndexReverse(): dataMap {
     if (!this._toIndexReverse) {
-      const coll = c(new Map());
+      const coll = new Map();
       this.toIndex.forEach((keys, identity) => {
-        if (Array.isArray(keys)) {
-          keys.forEach((key) => {
-            if (coll.hasKey(key)) {
-              const identities: unknown[] = coll.get(key);
-              if (!identities.includes(identity)) {
-                identities.push(identity);
-              }
-            } else {
-              coll.set(key, [identity]);
-            }
-          })
-        }
+        keys.forEach((key: unknown) => {
+          addToIndex(coll, key, identity)
+        })
       });
 
-      this._toIndexReverse = coll.value as dataMap;
+      this._toIndexReverse = coll
     }
 
     return this._toIndexReverse;
@@ -386,10 +401,11 @@ export default class Join implements JoinObj {
       // console.log('cannot find ', toIdentity, 'in ', this.toTable.name);
       return [];
     }
-    const midKeys = this.toIndex.get(toIdentity);
-    const identities = identitiesForMidKeys(midKeys, this.fromIndexReverse);
-    // console.log('getting fromIdentities for ', toIdentity, 'midKeys are ', midKeys, 'got', identities);
-    return identities;
+
+    if (this.fromIsIdentity) {
+      return this.toIndex.get(toIdentity)
+    }
+    return identitiesForMidKeys(this.toIndex.get(toIdentity), this.fromIndexReverse);
   }
 
   fromIdentitiesMap(toIdentities: unknown[]): identityMap {
@@ -413,10 +429,10 @@ export default class Join implements JoinObj {
     if (!this.fromIndex.has(fromIdentity)) {
       return [];
     }
-    const midKeys = this.fromIndex.get(fromIdentity);
-    const identities = identitiesForMidKeys(midKeys, this.toIndexReverse);
-    // console.log('getting toIdentities for ', fromIdentity, 'midKeys are ', midKeys, 'got', identities);
-    return identities;
+    if (this.toIsIdentity) {
+      return this.fromIndex.get(fromIdentity)
+    }
+    return identitiesForMidKeys(this.fromIndex.get(fromIdentity), this.toIndexReverse);
   }
 
   toIdentitiesMap(fromIdentities: unknown[]): identityMap {
