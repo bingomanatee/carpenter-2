@@ -33,6 +33,7 @@ export class Base implements BaseObj {
         }
       })
     }
+    this.tables.forEach((table: TableObj) => table.$clearJoins());
   }
 
   public readonly joins = new Map<string, JoinObj>()
@@ -47,7 +48,7 @@ export class Base implements BaseObj {
     return this._trans
   }
 
-  private tables: Map<string, TableObj> = new Map()
+  public tables: Map<string, TableObj> = new Map()
 
   table(name: string) {
     return this.tables.get(name)
@@ -65,13 +66,16 @@ export class Base implements BaseObj {
   }
 
   addJoin(joinConfig: JoinConfig) {
-    const join = new Join(joinConfig, this);
+    let join;
+
+    join = new Join(joinConfig, this);
+
     if (this.joins.has(join.name)) {
       throw new Error(`cannot redefine join ${join.name}`)
     }
     this.joins.set(join.name, join);
-    join.fromTable?.addJoin(join, 'from');
-    join.toTable?.addJoin(join, 'to');
+    join.fromTable?.addJoin(join);
+    join.toTable?.addJoin(join);
   }
 
   query(def: QueryDefObj): QueryObj {

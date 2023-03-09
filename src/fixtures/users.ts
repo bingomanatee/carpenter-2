@@ -1,6 +1,5 @@
-import { BaseObj, TableObj, TypedTableObj } from './types'
-import { Base } from './Base'
-import { v4 } from 'uuid'
+import { BaseObj, TableObj, TypedTableObj } from '../types'
+import { Base } from '../Base'
 import { c } from '@wonderlandlabs/collect'
 
 export enum Gender {

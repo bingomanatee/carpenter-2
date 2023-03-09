@@ -1,5 +1,5 @@
 import { BaseObj, TableItem, TypedTableItem } from '../types'
-import { Gender, makeBase, manyAddresses, manyPeople, UsersRecord, westCoast, } from '../testFixtures'
+import { Gender, makeBase, manyAddresses, manyPeople, UsersRecord, westCoast, } from '../fixtures/users'
 import { TableItemClass } from '../TableItemClass'
 
 const fs = require('fs');

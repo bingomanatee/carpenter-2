@@ -6,14 +6,17 @@ export type Student = {
 }
 
 export type BaseClass = {
-  name: string
+  name: string,
   teacher?: string,
   program: string,
   level?: string | number
 }
 
+export function isClass(arg: unknown): arg is Class {
+  return isBaseClass(arg) && 'id' in arg;
+}
 export function isBaseClass(arg: unknown): arg is BaseClass {
-  return !!(arg && typeof arg === 'object' && 'teacher' in arg && 'program' in arg)
+  return !!(arg && typeof arg === 'object' && 'name' in arg && 'program' in arg)
 }
 
 export type Class = {
@@ -100,15 +103,25 @@ export const makeCollegeBase = () => {
       },
       classes: {
         records: classes,
-        identityFromRecord: (record) => {
-          if (isBaseClass(record)) {
-            let name = record.name.split(' ').pop();
-            if (!name) {
-              name = record.program
+        onCreate(data, table) {
+          if ( isBaseClass(data)) {
+            if (!isClass(data)) {
+              return {...data, id: table.identityFor(data)}
             }
-            return name.substring(0, 4).toUpperCase() + (record.level || '101')
+            return data;
           }
-          return '101'
+          throw new Error('must be a base Class');
+        },
+        identityFromRecord (record) {
+          let name = '101'
+          if (isBaseClass(record)) {
+            let recordName = record.name.split(' ').pop();
+            if (!recordName) {
+              recordName = record.program
+            }
+            name = recordName.substring(0, 4).toUpperCase() + (record.level || '101');
+          }
+          return name;
         }
       }
     },

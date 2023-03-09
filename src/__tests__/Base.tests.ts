@@ -1,4 +1,4 @@
-import {Base} from '../index'
+import {Base} from '../Base'
 
 describe('Base', () => {
   describe('constructor', () => {

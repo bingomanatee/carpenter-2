@@ -8,7 +8,7 @@ import {
   UsersRecord,
   UserTable,
   westCoast
-} from '../testFixtures'
+} from '../fixtures/users'
 
 describe('Table', () => {
   describe('add()', () => {

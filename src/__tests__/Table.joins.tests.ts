@@ -2,7 +2,8 @@ import { isJoin } from '../types'
 import {
   makeBase,
   addressUsers, westCoast, addresses, AddressRecord, UsersRecord, StateRecord
-} from '../testFixtures'
+} from '../fixtures/users'
+import { makeCollegeBase } from '../fixtures/teachers'
 
 describe('Table', () => {
   describe('joins', () => {
@@ -53,6 +54,23 @@ describe('Table', () => {
         const [state, next] = addressStates.fromRecordsArray(10) as StateRecord[];
         expect(state.label).toBe('California');
         expect(next).toBeUndefined();
+      });
+    });
+
+    describe('add via', () => {
+
+      it('should allow you to join in records via', () => {
+        const base = makeCollegeBase();
+
+        const bobId = btoa('Bob');
+        const physId = 'PHYS101';
+        const bob = base.table('students')?.get(bobId);
+        const phys = base.table('classes')?.get(physId);
+
+        base.table('students')?.join(bobId, {
+          identity: physId,
+          tableName : 'classes'
+        });
       });
     });
   });

@@ -2,10 +2,10 @@ import {
   BaseObj,
   dataMap, identityMap,
   isFieldDef,
-  isJoinIdentityDef,
-  isKeygenDef, isScalar,
+  isJoinIdentityDef, isJoinTermTableNameBase,
+  isScalar,
   JoinConfig,
-  JoinDef, joinDirection, JoinFieldDef, JoinKeygenDef,
+  JoinDef, joinDirection, JoinFieldDef,
   JoinObj, JoinObjType,
   JoinPair, joinStrategy,
   TableObj
@@ -62,26 +62,14 @@ function extractFieldDef(def: JoinFieldDef, record: unknown) {
   return [];
 }
 
-function extractKeyGenDef(def: JoinKeygenDef, record: unknown, identity: unknown) {
-  const iter = def.keyGen(record, identity);
-  let done = false;
-  const out: any[] = [];
-
-  do {
-    const { value, done: isDone } = iter.next();
-    done = !!isDone;
-
-    if (done) {
-      break;
+function parseConfig(config: string | JoinDef) {
+  if (typeof config === 'string') {
+    return {
+      table: config,
     }
-
-    if (value !== undefined) {
-      out.push(value);
-    }
-    return out;
-  } while (!done);
-
-  return out;
+  } else {
+    return config;
+  }
 }
 
 export default class Join implements JoinObj {
@@ -104,32 +92,20 @@ export default class Join implements JoinObj {
 
   private _fromDef?: JoinDef
   private get fromDef(): JoinDef {
-    if (typeof this.config.from === 'string') {
-      if (!this._fromDef) {
-        this._fromDef = {
-          table: this.config.from,
-          identity: true
-        }
-      }
-      return this._fromDef
-    } else {
-      return this.config.from
+    if (!this._fromDef) {
+      this._fromDef = parseConfig(this.config.from);
     }
+
+    return this._fromDef
   }
 
   private _toDef?: JoinDef
   private get toDef(): JoinDef {
-    if (typeof this.config.to === 'string') {
-      if (!this._toDef) {
-        this._toDef = {
-          table: this.config.to,
-          identity: true
-        }
-      }
-      return this._toDef
-    } else {
-      return this.config.to
+    if (!this._toDef) {
+      this._toDef = parseConfig(this.config.to);
     }
+
+    return this._toDef
   }
 
   purgeIndexes() {
@@ -139,16 +115,8 @@ export default class Join implements JoinObj {
     delete this._toIndexReverse;
   }
 
-  /**
-   * intrinsic is a set of JoinPairs
-   * @private
-   */
-  private _intrinsic?: collectObj
-  private get intrinsic() {
-    if (!this._intrinsic) {
-      this._intrinsic = c(new Set(), {});
-    }
-    return this._intrinsic;
+  get isVia() {
+    return !!this.config.via;
   }
 
   get fromTable(): TableObj {
@@ -176,8 +144,6 @@ export default class Join implements JoinObj {
         let out: any[] = [];
         if (isJoinIdentityDef(this.fromDef)) {
           return [identity]
-        } else if (isKeygenDef(this.fromDef)) {
-          out = extractKeyGenDef(this.fromDef, record, this.fromTable);
         } else if (isFieldDef(this.fromDef)) {
           out = extractFieldDef(this.fromDef, record);
         }
@@ -219,8 +185,6 @@ export default class Join implements JoinObj {
         let out: any[] = [];
         if (isJoinIdentityDef(this.toDef)) {
           return [identity]
-        } else if (isKeygenDef(this.toDef)) {
-          out = extractKeyGenDef(this.toDef, record, this.toTable);
         } else if (isFieldDef(this.toDef)) {
           out = extractFieldDef(this.toDef, record);
         }
@@ -255,6 +219,9 @@ export default class Join implements JoinObj {
   }
 
   get strategy(): joinStrategy {
+    if (this.isVia) {
+      return 'identity-via-identity';
+    }
     if (isFieldDef(this.fromDef)) {
       if (isFieldDef(this.toDef)) {
         return 'field-field';
@@ -304,7 +271,7 @@ export default class Join implements JoinObj {
 
   link(fromIdentity: unknown, toIdentity: unknown) {
     if (!(this.fromTable.has(fromIdentity) && this.toTable.has(toIdentity))) {
-      throw new Error(`cannot link ${fromIdentity} and ${toIdentity}`);
+      throw new Error(`cannot link ${fromIdentity} and ${toIdentity} -- not in tables`);
     }
 
     switch (this.strategy) {
@@ -318,6 +285,10 @@ export default class Join implements JoinObj {
         if (isFieldDef(this.toDef)) {
           this.toTable.setField(toIdentity, this.toDef.field, fromIdentity);
         }
+        break;
+
+      case 'identity-via-identity':
+        this.linkVia(fromIdentity, toIdentity);
         break;
 
       case 'identity-identity':
@@ -335,10 +306,6 @@ export default class Join implements JoinObj {
           }
         }
         break;
-
-      case 'via':
-        this.linkVia(fromIdentity, toIdentity)
-        break
     }
   }
 
@@ -448,7 +415,7 @@ export default class Join implements JoinObj {
     }
     const midKeys = this.fromIndex.get(fromIdentity);
     const identities = identitiesForMidKeys(midKeys, this.toIndexReverse);
-  // console.log('getting toIdentities for ', fromIdentity, 'midKeys are ', midKeys, 'got', identities);
+    // console.log('getting toIdentities for ', fromIdentity, 'midKeys are ', midKeys, 'got', identities);
     return identities;
   }
 

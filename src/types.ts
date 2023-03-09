@@ -2,9 +2,14 @@ import { transactionSet } from '@wonderlandlabs/transact/dist/types'
 import { collectObj, generalObj } from '@wonderlandlabs/collect/lib/types'
 
 export type scalar = number | string;
-export function isScalar(arg: unknown) : arg is scalar {
-  if (typeof arg === 'string') return true;
-  if (typeof arg !== 'number') return false;
+
+export function isScalar(arg: unknown): arg is scalar {
+  if (typeof arg === 'string') {
+    return true;
+  }
+  if (typeof arg !== 'number') {
+    return false;
+  }
   return Number.isFinite(arg) && !(Number.isNaN(arg))
 }
 
@@ -17,9 +22,10 @@ export type BaseTableConfig = {
   records?: unknown[] | StringKeyRecord
 }
 
-export function isTableConfig(arg: unknown) : arg is TableConfig {
+export function isTableConfig(arg: unknown): arg is TableConfig {
   return !!(arg && typeof arg === 'object' && 'name' in arg)
 }
+
 export type TableConfig = {
   name: string
 } & BaseTableConfig
@@ -73,7 +79,7 @@ export interface TableObj {
   getRecords(identities: unknown[]): unknown[];
   generate(gen: recordGenerator, exclusive?: boolean): unknown
   getItem(identity: unknown): TableItem
-  addJoin(join: JoinObj, direction?: joinDirection): void
+  addJoin(join: JoinObj): void
   join(identity: unknown, term: JoinTerm): void;
   forEach(en: enumerator): void
   query(queryDef: TableQueryDefObj): QueryObj;
@@ -81,6 +87,7 @@ export interface TableObj {
   $set(identity: unknown, record: unknown): void
   $testTable(): unknown
   $joinFromTerm(term: JoinTerm): JoinItem | null
+  $clearJoins(): void;
 }
 
 export type JoinItem = {
@@ -103,6 +110,7 @@ export interface BaseObj {
   readonly trans: transactionSet,
   readonly joins: Map<string, JoinObj>,
   table(name: string): TableObj | undefined,
+  readonly tables: Map<string, TableObj>,
   has(name: string, identity?: unknown): boolean,
   addJoin(config: JoinConfig): void,
   addTable(config: TableConfig | BaseTableConfig, name?: string): void
@@ -113,38 +121,30 @@ type BaseJoinDef = {
   table: string,
   compare?(a: unknown, b: unknown): boolean
 }
-export type JoinFieldDef = { field: any }
-export type JoinKeygenDef = {
-  keyGen: recordSetGenerator
+
+export function isBaseJoinDef(arg: unknown): arg is BaseJoinDef {
+  return !!(
+    arg
+    && typeof arg === 'object'
+    && 'table' in arg
+    && (('compare' in arg && typeof arg.compare === 'function') || (!('compare' in arg)))
+  );
 }
-type JoinIdentityDef = { identity: true }
+
+export type JoinFieldDef = { field: any }
+type JoinIdentityDef = {}
 
 export function isJoinIdentityDef(arg: unknown): arg is JoinIdentityDef {
-  return !!(
-    arg
-    && typeof arg === 'object'
-    && 'identity' in arg
-  );
+  return isBaseJoinDef(arg) && !isFieldDef(arg)
 }
 
-export function isKeygenDef(arg: unknown): arg is JoinKeygenDef {
-  return !!(
-    arg
-    && typeof arg === 'object'
-    && 'keyDef' in arg
-    && typeof arg.keyDef === 'function'
-  );
-}
 
 export function isFieldDef(arg: unknown): arg is JoinFieldDef {
-  return !!(
-    arg
-    && typeof arg === 'object'
-    && 'field' in arg
-  );
+  return isBaseJoinDef(arg)
+    && ('field' in arg)
 }
 
-export type JoinDef = BaseJoinDef & (JoinFieldDef | JoinKeygenDef | JoinIdentityDef)
+export type JoinDef = BaseJoinDef | BaseJoinDef & JoinFieldDef;
 
 export type JoinConfig = {
   from: string | JoinDef
@@ -153,7 +153,12 @@ export type JoinConfig = {
   via?: boolean | string
 }
 
-export type joinStrategy = 'field-field' | 'field-identity' | 'identity-field' | 'identity-identity' | 'via'
+export type joinStrategy =
+  'field-field'
+  | 'field-identity'
+  | 'identity-field'
+  | 'identity-identity'
+  | 'identity-via-identity'
 
 export function isJoinTermJoinNameBase(arg: unknown): arg is JoinTermJoinNameBase {
   return !!(arg && typeof arg === 'object' && 'joinName' in arg);
@@ -168,6 +173,7 @@ type JoinTermTableNameBase = { tableName: string }
 type JoinTermBase = JoinTermJoinNameBase | JoinTermTableNameBase;
 
 type JoinTermIdentityDataBase = { identity: unknown, data: unknown }
+
 export function isJoinTermIdentityDataBase(arg: unknown): arg is JoinTermIdentityDataBase {
   return !!(arg
     && typeof arg === 'object'
@@ -177,6 +183,7 @@ export function isJoinTermIdentityDataBase(arg: unknown): arg is JoinTermIdentit
 }
 
 type JoinTermDataBase = { data: unknown }
+
 export function isJoinTermDataBase(arg: unknown): arg is JoinTermIdentityDataBase {
   return !!(arg
     && typeof arg === 'object'
@@ -194,6 +201,7 @@ export function isJoinTermIdentityBase(arg: unknown): arg is JoinTermIdentityBas
 }
 
 type JoinTermDatasBase = { datas: unknown[] }
+
 export function isJoinTermDatasBase(arg: unknown): arg is JoinTermDatasBase {
   return !!(arg
     && typeof arg === 'object'
@@ -201,7 +209,9 @@ export function isJoinTermDatasBase(arg: unknown): arg is JoinTermDatasBase {
     && Array.isArray(arg.datas)
   );
 }
+
 type JoinTermDataPairsBase = { dataPairs: unknown[] }
+
 export function isJoinTermDataPairsBase(arg: unknown): arg is JoinTermDataPairsBase {
   return !!(arg
     && typeof arg === 'object'
@@ -228,6 +238,7 @@ export interface JoinObj {
   fromTable: TableObj,
   toTable: TableObj,
   $type: JoinObjType,
+  isVia: boolean,
   toRecordsMap(fromIdentity: unknown): dataMap,
   toRecordsArray(fromIdentity: unknown): unknown[],
   fromRecordsMap(toIdentity: unknown): dataMap,
@@ -240,7 +251,7 @@ export interface JoinObj {
   link(id1: unknown, id2: unknown): void,
   linkMany(fromIdentity: unknown, dataItems: unknown[] | dataMap,
            direction: joinDirection,
-           isPairs?: boolean) : void
+           isPairs?: boolean): void
 }
 
 export function isJoin(arg: unknown): arg is JoinObj {

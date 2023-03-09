@@ -97,28 +97,23 @@ export default class Table implements TableObj {
   get joins() {
     if (!this._joins) {
       this._joins = new Map();
-      this.base.joins.forEach((join, name) => {
-        if (join.fromTable.name === this.name) {
-          this._joins?.set(name, { join, direction: 'from' })
-        } else if (join.toTable.name === this.name) {
-          this._joins?.set(name, { join, direction: 'to' })
-        }
+      this.base.joins.forEach((join) => {
+        this.addJoin(join);
       })
     }
     return this._joins;
   }
 
-  addJoin(join: JoinObj, direction?: joinDirection) {
-    if (!direction) {
-      if (join.fromTable.name === this.name) {
-        this.addJoin(join, 'from');
-      }
-      if (join.toTable.name === this.name) {
-        this.addJoin(join, 'to');
-      }
-      return;
+  $clearJoins() {
+    delete this._joins;
+  }
+
+  addJoin(join: JoinObj) {
+    if (join.fromTable.name === this.name) {
+      this.joins.set(join.name, { join, direction: 'from' })
+    } else if (join.toTable.name === this.name) {
+      this.joins.set(join.name, { join, direction: 'to' })
     }
-    this.joins.set(join.name, { join, direction })
   }
 
   identityFor(data: unknown): unknown {
@@ -255,7 +250,7 @@ export default class Table implements TableObj {
   }
 
   query(queryDef: TableQueryDefObj) {
-    return this.base.query({table: this.name, ...queryDef});
+    return this.base.query({ table: this.name, ...queryDef });
   }
 
   // ----- internal methods
@@ -301,12 +296,17 @@ export default class Table implements TableObj {
       }
     } else if (isJoinTermTableNameBase(term)) {
       // @TODO: detect self-joins
-      const {tableName} = term;
+      const { tableName } = term;
 
       // requesting a match to the other side of the JoinTerm
       let matches = Array.from(this.joins.values()).filter((joinItem: JoinItem) => {
-        return joinItem.join.fromTable.name === tableName
-          || joinItem.join.toTable.name === tableName;
+        return (
+          (joinItem.join.fromTable.name === this.name
+            || joinItem.join.toTable.name === tableName)
+          ||
+          (joinItem.join.fromTable.name === tableName
+            || joinItem.join.toTable.name === this.name)
+        );
       });
 
       switch (matches.length) {
