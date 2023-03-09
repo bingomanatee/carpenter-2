@@ -1,5 +1,5 @@
 import {
-  BaseObj, identityMap, JoinDef,
+  BaseObj, identityMap, isQueryJoinDefJoinName, isQueryJoinDefTableName, JoinDef,
   JoinItem,
   JoinObj,
   QueryDefObj,
@@ -12,6 +12,9 @@ import {
 import { TableItemClass } from './TableItemClass'
 import { collectObj } from '@wonderlandlabs/collect/lib/types'
 import { c } from '@wonderlandlabs/collect'
+import { filter, map, MonoTypeOperatorFunction, Observable, Observer, share, Subscription } from 'rxjs';
+import { transObj } from '@wonderlandlabs/transact/dist/types'
+import { listenerFactory } from './utils'
 
 
 export default class Query implements QueryObj {
@@ -65,12 +68,22 @@ export default class Query implements QueryObj {
       return;
     }
 
-    const joinItem = items[0].table.joins.get(joinDef.joinName);
+    let joinItem: JoinItem | null = null
+    if (isQueryJoinDefJoinName(joinDef)) {
+      joinItem = items[0].table.joins.get(joinDef.joinName) || null;
+      if (!joinItem) {
+        throw new Error(`cannot retrieve join ${joinDef.joinName} from ${items[0].table.name || '<missing table>'}`);
+      }
+    } else if (isQueryJoinDefTableName(joinDef)) {
+      joinItem = items[0].table.$joinFromTableName(joinDef.tableName)
+    }
+
     if (!joinItem) {
-      throw new Error(`cannot retrieve join ${joinDef.joinName} from ${items[0].table.name || '<missing table>'}`);
+      throw new Error('no join item');
     }
 
     items?.forEach((ts) => {
+      if (!joinItem) return; // typescriptism
 
       let ids: unknown[];
       let table: TableObj;
@@ -110,7 +123,11 @@ export default class Query implements QueryObj {
       if (!ts.joins) {
         ts.joins = new Map();
       }
-      ts.joins.set(joinDef.joinName, joinedItems);
+      if (isQueryJoinDefJoinName(joinDef)) {
+        ts.joins.set(joinDef.joinName, joinedItems);
+      } else if (isQueryJoinDefTableName(joinDef)) {
+
+      }
     })
   }
 
@@ -162,6 +179,19 @@ export default class Query implements QueryObj {
   get toJSON() {
     return this.value.map(TableItemClass.toJSON);
   }
+
+  private get observable() {
+    //@ts-ignore
+    return this.base.trans.pipe(...commitPipes(this));
+  }
+
+  subscribe(listener: unknown) {
+    return this.observable.subscribe(listenerFactory(listener));
+  }
 }
+
+export type mutators = MonoTypeOperatorFunction<any>[];
+export const commitPipes = (target: QueryObj): mutators =>
+   [filter((set: Set<transObj>) => set.size === 0), map(() => target.toJSON), share()]
 
 type pair = [any, TableItem];

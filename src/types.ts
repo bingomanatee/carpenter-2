@@ -1,5 +1,6 @@
-import { transactionSet } from '@wonderlandlabs/transact/dist/types'
+import { transactionSet, transObj } from '@wonderlandlabs/transact/dist/types'
 import { collectObj, generalObj } from '@wonderlandlabs/collect/lib/types'
+import { MonoTypeOperatorFunction, Observer } from 'rxjs'
 
 export type scalar = number | string;
 
@@ -83,11 +84,13 @@ export interface TableObj {
   join(identity: unknown, term: JoinTerm): void;
   forEach(en: enumerator): void
   query(queryDef: TableQueryDefObj): QueryObj;
+  queryFor(identity: unknown, queryDef: TableQueryDefObj) : QueryObj;
 
   $set(identity: unknown, record: unknown): void
   $testTable(): unknown
   $joinFromTerm(term: JoinTerm): JoinItem | null
   $clearJoins(): void;
+  $joinFromTableName(name: string) : JoinItem | null
 }
 
 export type JoinItem = {
@@ -299,11 +302,35 @@ export type selectorMap = (item: TableItem) => unknown
 
 export type SelectorObj = SelectorChooserObj | SelectorSorterObj | selectorMap
 
-export type QueryJoinDefObj = {
+export type QueryJoinDefJoinName = {
   joinName: string,
-  sel?: SelectorObj | SelectorObj[]
+}
+export type QueryJoinDefTableName = {
+  tableName: string
+}
+
+export type queryJoinDefObjSelector = SelectorObj | SelectorObj[]
+
+export type QueryJoinDefObjBase = {
+  sel?: queryJoinDefObjSelector
   joins?: QueryJoinDefObj[]
 }
+
+export function isQueryJoinDefJoinName(arg: unknown):arg is QueryJoinDefJoinName {
+  return !!(
+    arg && typeof arg === 'object' &&
+    ('joinName' in arg)
+  )
+}
+
+export function isQueryJoinDefTableName(arg: unknown): arg is QueryJoinDefTableName {
+  return !!(
+    arg && typeof arg === 'object' &&
+    ('tableName' in arg)
+  )
+}
+
+export type QueryJoinDefObj = QueryJoinDefObjBase & (QueryJoinDefJoinName | QueryJoinDefTableName)
 
 export type TableQueryDefObj = {
   sel?: SelectorObj | SelectorObj[]
@@ -318,4 +345,27 @@ export type QueryObj = {
   base: BaseObj,
   toJSON: Record<string, unknown>[]
 }
+
+
+// -------------- general things
+
+export type pojo = { [key: string | symbol]: any };
+
+export interface valuable {
+  value: any;
+  fast?: boolean;
+}
+
+
+// ------------- RxJS / observable type
+
+export type listenerType = Partial<Observer<Set<transObj>>> | ((value: Set<transObj>) => void) | undefined;
+export type voidFn = () => void;
+export type listenerFn = (next: any) => void;
+export type mutators = MonoTypeOperatorFunction<any>[];
+export type listenerObj = {
+  next?: listenerFn;
+  error?: listenerFn;
+  complete?: voidFn;
+};
 

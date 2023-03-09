@@ -5,12 +5,12 @@ import {
   dataMap,
   enumerator,
   identityConfigFn, isJoinTermJoinNameBase, isJoinTermTableNameBase, joinDirection, JoinItem, JoinObj, JoinTerm,
-  mutatorFn,
+  mutatorFn, QueryJoinDefObj, queryJoinDefObjSelector,
   recordGenerator,
   recordTestFn,
-  recordTestValue,
+  recordTestValue, SelectorObj,
   StringKeyRecord, TableConfig,
-  TableItem,
+  TableItem, tableItemFilter,
   TableObj, TableQueryDefObj,
   tableTestFn
 } from './types'
@@ -249,8 +249,23 @@ export default class Table implements TableObj {
     return new TableItemClass(this, identity)
   }
 
-  query(queryDef: TableQueryDefObj) {
+  query(queryDef: QueryJoinDefObj) {
     return this.base.query({ table: this.name, ...queryDef });
+  }
+
+  queryFor(identity: unknown, queryDef: QueryJoinDefObj) {
+    const filter: tableItemFilter = (tableItem: TableItem) => tableItem.identity === identity
+    const filterSelector: SelectorObj = {filter}
+    const { sel: originalSel } = queryDef;
+    let sel: queryJoinDefObjSelector = filterSelector;
+    if (originalSel) {
+      if (Array.isArray(originalSel)) {
+        sel = [filterSelector, ...originalSel]
+      } else {
+        sel = [filterSelector, originalSel]
+      }
+    }
+    return this.base.query({ table: this.name, ...queryDef, sel });
   }
 
   // ----- internal methods
@@ -286,53 +301,38 @@ export default class Table implements TableObj {
   }
 
   $joinFromTerm(term: JoinTerm): JoinItem | null {
-    let join: JoinObj | null = null;
-    let direction: joinDirection | null = null;
     if (isJoinTermJoinNameBase(term)) {
       const joinItem = this.joins.get(term.joinName);
       if (joinItem) {
-        direction = joinItem.direction;
-        join = joinItem.join;
+        return joinItem;
       }
     } else if (isJoinTermTableNameBase(term)) {
       // @TODO: detect self-joins
       const { tableName } = term;
 
-      // requesting a match to the other side of the JoinTerm
-      let matches = Array.from(this.joins.values()).filter((joinItem: JoinItem) => {
-        return (
-          (joinItem.join.fromTable.name === this.name
-            || joinItem.join.toTable.name === tableName)
-          ||
-          (joinItem.join.fromTable.name === tableName
-            || joinItem.join.toTable.name === this.name)
-        );
-      });
+      return this.$joinFromTableName(tableName);
+    }
+    return null;
+  }
 
-      switch (matches.length) {
-        case 0:
-          throw new Error(`no matching joins for ${tableName}`);
-          break;
-        case 1:
-          join = matches[0].join;
-          direction = matches[0].direction
-          break;
-        default:
-          throw new Error(`multiple matches between ${this.name} and ${tableName}`);
-      }
+  $joinFromTableName(tableName: string) {
+    // requesting a match to the other side of the JoinTerm
+    let matches = Array.from(this.joins.values()).filter((joinItem: JoinItem) => {
+      return (
+        (joinItem.join.fromTable.name === this.name
+          || joinItem.join.toTable.name === tableName)
+        ||
+        (joinItem.join.fromTable.name === tableName
+          || joinItem.join.toTable.name === this.name)
+      );
+    });
+
+    if (matches.length === 1) {
+      return matches[0];
     }
-    if (!join) {
-      throw new Error('cannot find linkVia');
+    if (matches.length > 1) {
+      throw new Error('multiple joins for ' + tableName + 'from ' + this.name);
     }
-    if (!direction) {
-      if (join.fromTable.name === this.name) {
-        direction = 'from';
-      } else if (join.toTable.name === this.name) {
-        direction = 'to';
-      } else {
-        throw new Error('bad $joinFromTerm table');
-      }
-    }
-    return { join, direction }
+    return null;
   }
 }

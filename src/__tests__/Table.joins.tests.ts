@@ -58,19 +58,20 @@ describe('Table', () => {
     });
 
     describe('add via', () => {
-
       it('should allow you to join in records via', () => {
         const base = makeCollegeBase();
 
         const bobId = btoa('Bob');
         const physId = 'PHYS101';
-        const bob = base.table('students')?.get(bobId);
-        const phys = base.table('classes')?.get(physId);
 
         base.table('students')?.join(bobId, {
           identity: physId,
           tableName : 'classes'
         });
+
+        const [[_joinID, join], after] = base.table('studentClasses')?.$records|| []
+        expect(join).toEqual({ students: 'Qm9i', classes: 'PHYS101' });
+        expect(after).toBeUndefined()
       });
     });
   });

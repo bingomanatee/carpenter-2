@@ -165,15 +165,19 @@ export default class Join implements JoinObj {
 
   get fromIndex(): dataMap {
     if (!this._fromIndex) {
-      this._fromIndex = this.fromTable.$coll.getMap((record, identity) => {
-        let out: any[] = [];
-        if (this.fromIsIdentity) {
-          return [identity]
-        } else if (isFieldDef(this.fromDef)) {
-          out = extractFieldDef(this.fromDef, record);
-        }
-        return out;
-      });
+      if (this.isVia) {
+        this.indexVia();
+      } else {
+        this._fromIndex = this.fromTable.$coll.getMap((record, identity) => {
+          let out: any[] = [];
+          if (this.fromIsIdentity) {
+            return [identity]
+          } else if (isFieldDef(this.fromDef)) {
+            out = extractFieldDef(this.fromDef, record);
+          } // else what?
+          return out;
+        });
+      }
     }
     return this._fromIndex || emptyMap
   }
@@ -205,15 +209,19 @@ export default class Join implements JoinObj {
 
   get toIndex(): dataMap {
     if (!this._toIndex) {
-      this._toIndex = this.toTable.$coll.getMap((record, identity) => {
-        let out: any[] = [];
-        if (this.toIsIdentity) {
-          return [identity]
-        } else if (isFieldDef(this.toDef)) {
-          out = extractFieldDef(this.toDef, record);
-        }
-        return out;
-      });
+      if (this.isVia) {
+        this.indexVia();
+      } else {
+        this._toIndex = this.toTable.$coll.getMap((record, identity) => {
+          let out: any[] = [];
+          if (this.toIsIdentity) {
+            return [identity]
+          } else if (isFieldDef(this.toDef)) {
+            out = extractFieldDef(this.toDef, record);
+          }
+          return out;
+        });
+      }
     }
     return this._toIndex || emptyMap
   }
@@ -393,16 +401,12 @@ export default class Join implements JoinObj {
 
   fromIdentities(toIdentity: unknown): unknown[] {
 
-    if (this.config.via) {
-      return this.toIndex.get(toIdentity);
-    }
-
     if (!this.toIndex.has(toIdentity)) {
       // console.log('cannot find ', toIdentity, 'in ', this.toTable.name);
       return [];
     }
 
-    if (this.fromIsIdentity) {
+    if (this.fromIsIdentity || this.isVia) {
       return this.toIndex.get(toIdentity)
     }
     return identitiesForMidKeys(this.toIndex.get(toIdentity), this.fromIndexReverse);
@@ -422,14 +426,10 @@ export default class Join implements JoinObj {
   }
 
   toIdentities(fromIdentity: unknown): unknown[] {
-    if (this.config.via) {
-      return this.fromIndex.get(fromIdentity);
-    }
-
     if (!this.fromIndex.has(fromIdentity)) {
       return [];
     }
-    if (this.toIsIdentity) {
+    if (this.toIsIdentity || this.isVia) {
       return this.fromIndex.get(fromIdentity)
     }
     return identitiesForMidKeys(this.fromIndex.get(fromIdentity), this.toIndexReverse);
@@ -473,6 +473,22 @@ export default class Join implements JoinObj {
 
   fromRecordsArray(toIdentity: unknown): unknown[] {
     return this.fromIdentities(toIdentity).map((identity: unknown) => this.fromTable.get(identity));
+  }
+
+  private indexVia() {
+    this._fromIndex = new Map();
+    this._toIndex = new Map();
+    const fromKey = this.fromTable.name;
+    const toKey = this.toTable.name;
+    if (this.viaTable) {
+      for (const [_id, keys] of this.viaTable.$coll.iter) {
+        const viaItem = keys as Record<string, unknown>;
+        const { [fromKey]: fromIndex, [toKey]: toIndex } = viaItem;
+
+        addToIndex(this._fromIndex, fromIndex, toIndex);
+        addToIndex(this._toIndex, toIndex, fromIndex);
+      }
+    }
   }
 }
 

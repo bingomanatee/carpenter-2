@@ -1,6 +1,7 @@
 import { BaseObj, TableItem, TypedTableItem } from '../types'
 import { Gender, makeBase, manyAddresses, manyPeople, UsersRecord, westCoast, } from '../fixtures/users'
 import { TableItemClass } from '../TableItemClass'
+import { makeCollegeBase } from '../fixtures/teachers'
 
 const fs = require('fs');
 const shouldAllowDeepJoins = JSON.parse(
@@ -600,6 +601,39 @@ describe('Queries', () => {
                 "table": "addresses",
                 "value": { "id": 10, "address": "1000 11th Ave", "city": "Seattle", "state": "WA", "zip": 10133 },
                 "identity": 10,
+                "joins": null
+              }]
+            }
+          }]
+        );
+      });
+
+      it('should allow via links', () => {
+
+        const base = makeCollegeBase();
+
+        const bobId = btoa('Bob');
+        const physId = 'PHYS101';
+
+        base.table('students')?.join(bobId, {
+          identity: physId,
+          tableName: 'classes'
+        });
+
+        const studentClasses = base.table('students')?.query({
+          sel: [{ filter: (tableItem) => tableItem.identity === bobId }],
+          joins: [{ joinName: 'studentsToClasses' }]
+        });
+
+        expect(studentClasses?.toJSON).toEqual([{
+            "table": "students",
+            "value": { "name": "Bob", "studentId": "Qm9i" },
+            "identity": "Qm9i",
+            "joins": {
+              "studentsToClasses": [{
+                "table": "classes",
+                "value": { "name": "Physics", "program": "Science", "id": "PHYS101" },
+                "identity": "PHYS101",
                 "joins": null
               }]
             }

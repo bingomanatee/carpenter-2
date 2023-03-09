@@ -65,6 +65,14 @@ const restoreTable = (_err: unknown, trans: transObj) => {
   throw _err;
 }
 export const contextHandlers = ((base: BaseObj) => {
+    let suspended: transObj[] = [];
+
+    function addSuspend(trans: transObj) {
+      trans.meta.set('tablesToValidate', new Set());
+      trans.meta.set('recordsToValidate', new Set());
+      suspended.push(trans);
+    }
+
     return {
       add: [
         (trans: transObj, table: TableObj, data: unknown, identity?: unknown, replace?: boolean) => {
