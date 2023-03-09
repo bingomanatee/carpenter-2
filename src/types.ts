@@ -1,6 +1,13 @@
 import { transactionSet } from '@wonderlandlabs/transact/dist/types'
 import { collectObj, generalObj } from '@wonderlandlabs/collect/lib/types'
 
+export type scalar = number | string;
+export function isScalar(arg: unknown) : arg is scalar {
+  if (typeof arg === 'string') return true;
+  if (typeof arg !== 'number') return false;
+  return Number.isFinite(arg) && !(Number.isNaN(arg))
+}
+
 export type BaseTableConfig = {
   onCreate?: creatorFn
   onUpdate?: mutatorFn
@@ -98,6 +105,7 @@ export interface BaseObj {
   table(name: string): TableObj | undefined,
   has(name: string, identity?: unknown): boolean,
   addJoin(config: JoinConfig): void,
+  addTable(config: TableConfig | BaseTableConfig, name?: string): void
   query(queryDef: QueryDefObj): QueryObj,
 }
 
@@ -145,7 +153,7 @@ export type JoinConfig = {
   via?: boolean | string
 }
 
-export type joinStrategy = 'field-field' | 'field-identity' | 'identity-field' | 'identity-identity'
+export type joinStrategy = 'field-field' | 'field-identity' | 'identity-field' | 'identity-identity' | 'via'
 
 export function isJoinTermJoinNameBase(arg: unknown): arg is JoinTermJoinNameBase {
   return !!(arg && typeof arg === 'object' && 'joinName' in arg);
@@ -220,15 +228,15 @@ export interface JoinObj {
   fromTable: TableObj,
   toTable: TableObj,
   $type: JoinObjType,
-  toRecordsFor(fromIdentity: unknown): dataMap,
-  toRecordsForArray(fromIdentity: unknown): unknown[],
-  fromRecordsFor(toIdentity: unknown): dataMap,
-  fromRecordsForArray(fromIdentity: unknown): unknown[],
+  toRecordsMap(fromIdentity: unknown): dataMap,
+  toRecordsArray(fromIdentity: unknown): unknown[],
+  fromRecordsMap(toIdentity: unknown): dataMap,
+  fromRecordsArray(fromIdentity: unknown): unknown[],
   purgeIndexes(): void,
   fromIdentities(identity: unknown): unknown[],
   toIdentities(identity: unknown): unknown[],
-  from(identities: unknown[]): identityMap,
-  to(identities: unknown[]): identityMap,
+  fromIdentitiesMap(identities: unknown[]): identityMap,
+  toIdentitiesMap(identities: unknown[]): identityMap,
   link(id1: unknown, id2: unknown): void,
   linkMany(fromIdentity: unknown, dataItems: unknown[] | dataMap,
            direction: joinDirection,

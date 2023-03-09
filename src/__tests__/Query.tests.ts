@@ -2,6 +2,15 @@ import { BaseObj, TableItem, TypedTableItem } from '../types'
 import { Gender, makeBase, manyAddresses, manyPeople, UsersRecord, westCoast, } from '../testFixtures'
 import { TableItemClass } from '../TableItemClass'
 
+const fs = require('fs');
+const shouldAllowDeepJoins = JSON.parse(
+  fs.readFileSync(__dirname + '/../fixtures/expect/Query/shouldAllowDeepJoins.json').toString()
+);
+
+const shouldAllowDeepJoinsOtherDirection = JSON.parse(
+  fs.readFileSync(__dirname + '/../fixtures/expect/Query/shouldAllowDeepJoinsOtherDirection.json').toString()
+);
+
 const women = (tr: TableItem) => {
   const user = tr.value as UsersRecord;
   return user.gender === Gender.female
@@ -534,112 +543,14 @@ describe('Queries', () => {
         sel: { count: 4 }
       });
 
-      const values = query.value.map(TableItemClass.toJSON);
-
+      const values = query.toJSON
+      // console.log('deep joins are ', JSON.stringify(values, undefined, 4));
       expect(values).toEqual(
-        [{
-          "table": "users",
-          "value": {
-            "name": "Alpha",
-            "gender": "male",
-            "id": 100,
-            "last": "Jones",
-            "age": 20,
-            "state": "CA",
-            "address": 210
-          },
-          "identity": 100,
-          "joins": {
-            "userAddresses": [{
-              "table": "addresses",
-              "value": {
-                "id": 210,
-                "address": "1000 First Avenue",
-                "city": "San Francisco",
-                "state": "CA",
-                "zip": 11135
-              },
-              "identity": 210,
-              "joins": {
-                "addressStates": [{
-                  "table": "states",
-                  "value": { "abbr": "CA", "label": "California" },
-                  "identity": "CA",
-                  "joins": null
-                }]
-              }
-            }]
-          }
-        }, {
-          "table": "users",
-          "value": { "name": "Beta", "gender": "male", "id": 101, "last": "Smith", "age": 30, "state": "CA" },
-          "identity": 101,
-          "joins": null
-        }, {
-          "table": "users",
-          "value": {
-            "name": "Gamma",
-            "gender": "female",
-            "id": 102,
-            "last": "Jones",
-            "age": 40,
-            "state": "OR",
-            "address": 290
-          },
-          "identity": 102,
-          "joins": {
-            "userAddresses": [{
-              "table": "addresses",
-              "value": {
-                "id": 290,
-                "address": "44 Los Angeles Dr",
-                "city": "Simi Valley",
-                "state": "CA",
-                "zip": 93065
-              },
-              "identity": 290,
-              "joins": {
-                "addressStates": [{
-                  "table": "states",
-                  "value": { "abbr": "CA", "label": "California" },
-                  "identity": "CA",
-                  "joins": null
-                }]
-              }
-            }]
-          }
-        }, {
-          "table": "users",
-          "value": {
-            "name": "Delta",
-            "gender": "male",
-            "id": 103,
-            "last": "Smith",
-            "age": 20,
-            "state": "CA",
-            "address": 280
-          },
-          "identity": 103,
-          "joins": {
-            "userAddresses": [{
-              "table": "addresses",
-              "value": { "id": 280, "address": "400 4th Ave", "city": "Portland", "state": "OR", "zip": 97205 },
-              "identity": 280,
-              "joins": {
-                "addressStates": [{
-                  "table": "states",
-                  "value": { "abbr": "OR", "label": "Oregon" },
-                  "identity": "OR",
-                  "joins": null
-                }]
-              }
-            }]
-          }
-        }]
+        shouldAllowDeepJoins
       );
     });
 
-    it('should deep linkVia in other direction', () => {
+    it('should deep link in other direction', () => {
       const query = base.query({
         table: 'states',
         joins: [{
@@ -650,240 +561,7 @@ describe('Queries', () => {
         }]
       });
       expect(query.toJSON).toEqual(
-        [{
-          "table": "states", "value": { "abbr": "CA", "label": "California" }, "identity": "CA", "joins": {
-            "addressStates": [{
-              "table": "addresses",
-              "value": {
-                "id": 210,
-                "address": "1000 First Avenue",
-                "city": "San Francisco",
-                "state": "CA",
-                "zip": 11135
-              },
-              "identity": 210,
-              "joins": {
-                "userAddresses": [{
-                  "table": "users",
-                  "value": {
-                    "name": "Alpha",
-                    "gender": "male",
-                    "id": 100,
-                    "last": "Jones",
-                    "age": 20,
-                    "state": "CA",
-                    "address": 210
-                  },
-                  "identity": 100,
-                  "joins": null
-                }]
-              }
-            }, {
-              "table": "addresses",
-              "value": {
-                "id": 230,
-                "address": "1010 Simi Valley Dr",
-                "city": "Simi Valley",
-                "state": "CA",
-                "zip": 93065
-              },
-              "identity": 230,
-              "joins": {
-                "userAddresses": [{
-                  "table": "users",
-                  "value": {
-                    "name": "Kappa",
-                    "gender": "female",
-                    "id": 108,
-                    "last": "Smith",
-                    "age": 45,
-                    "state": "WA",
-                    "address": 230
-                  },
-                  "identity": 108,
-                  "joins": null
-                }]
-              }
-            }, {
-              "table": "addresses",
-              "value": {
-                "id": 240,
-                "address": "666 Buffalo Avenue",
-                "city": "San Francisco",
-                "state": "CA",
-                "zip": 11135
-              },
-              "identity": 240,
-              "joins": {
-                "userAddresses": [{
-                  "table": "users",
-                  "value": {
-                    "name": "Iota",
-                    "gender": "male",
-                    "id": 107,
-                    "last": "Jones",
-                    "age": 35,
-                    "state": "WA",
-                    "address": 240
-                  },
-                  "identity": 107,
-                  "joins": null
-                }]
-              }
-            }, {
-              "table": "addresses",
-              "value": {
-                "id": 260,
-                "address": "444 Simi Valley Dr",
-                "city": "Simi Valley",
-                "state": "CA",
-                "zip": 93065
-              },
-              "identity": 260,
-              "joins": {
-                "userAddresses": [{
-                  "table": "users",
-                  "value": {
-                    "name": "Zeta",
-                    "gender": "male",
-                    "id": 105,
-                    "last": "Jones",
-                    "age": 40,
-                    "state": "WA",
-                    "address": 260
-                  },
-                  "identity": 105,
-                  "joins": null
-                }]
-              }
-            }, {
-              "table": "addresses",
-              "value": {
-                "id": 270,
-                "address": "1000 Harrison St",
-                "city": "San Francisco",
-                "state": "CA",
-                "zip": 98403
-              },
-              "identity": 270,
-              "joins": {
-                "userAddresses": [{
-                  "table": "users",
-                  "value": {
-                    "name": "Epsilon",
-                    "gender": "female",
-                    "id": 104,
-                    "last": "Smith",
-                    "age": 30,
-                    "state": "OR",
-                    "address": 270
-                  },
-                  "identity": 104,
-                  "joins": null
-                }]
-              }
-            }, {
-              "table": "addresses",
-              "value": {
-                "id": 290,
-                "address": "44 Los Angeles Dr",
-                "city": "Simi Valley",
-                "state": "CA",
-                "zip": 93065
-              },
-              "identity": 290,
-              "joins": {
-                "userAddresses": [{
-                  "table": "users",
-                  "value": {
-                    "name": "Gamma",
-                    "gender": "female",
-                    "id": 102,
-                    "last": "Jones",
-                    "age": 40,
-                    "state": "OR",
-                    "address": 290
-                  },
-                  "identity": 102,
-                  "joins": null
-                }]
-              }
-            }]
-          }
-        }, {
-          "table": "states",
-          "value": { "abbr": "OR", "label": "Oregon" },
-          "identity": "OR",
-          "joins": {
-            "addressStates": [{
-              "table": "addresses",
-              "value": { "id": 220, "address": "3317 NE 15th", "city": "Portland", "state": "OR", "zip": 97205 },
-              "identity": 220,
-              "joins": {
-                "userAddresses": [{
-                  "table": "users",
-                  "value": {
-                    "name": "Lambda",
-                    "gender": "male",
-                    "id": 109,
-                    "last": "Jones",
-                    "age": 50,
-                    "state": "OR",
-                    "address": 220
-                  },
-                  "identity": 109,
-                  "joins": null
-                }]
-              }
-            }, {
-              "table": "addresses",
-              "value": {
-                "id": 250,
-                "address": "101 Multnomah Avenue",
-                "city": "Portland",
-                "state": "OR",
-                "zip": 97205
-              },
-              "identity": 250,
-              "joins": {
-                "userAddresses": [{
-                  "table": "users",
-                  "value": {
-                    "name": "Eta",
-                    "gender": "male",
-                    "id": 106,
-                    "last": "Smith",
-                    "age": 25,
-                    "state": "CA",
-                    "address": 250
-                  },
-                  "identity": 106,
-                  "joins": null
-                }]
-              }
-            }, {
-              "table": "addresses",
-              "value": { "id": 280, "address": "400 4th Ave", "city": "Portland", "state": "OR", "zip": 97205 },
-              "identity": 280,
-              "joins": {
-                "userAddresses": [{
-                  "table": "users",
-                  "value": {
-                    "name": "Delta",
-                    "gender": "male",
-                    "id": 103,
-                    "last": "Smith",
-                    "age": 20,
-                    "state": "CA",
-                    "address": 280
-                  },
-                  "identity": 103,
-                  "joins": null
-                }]
-              }
-            }]
-          }
-        }, { "table": "states", "value": { "abbr": "WA", "label": "Washington" }, "identity": "WA", "joins": null }]
+        shouldAllowDeepJoinsOtherDirection
       );
     });
 

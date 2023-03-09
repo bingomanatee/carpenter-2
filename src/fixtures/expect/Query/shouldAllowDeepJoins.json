@@ -1,0 +1,138 @@
+[
+  {
+    "table": "users",
+    "value": {
+      "name": "Alpha",
+      "gender": "male",
+      "id": 100,
+      "last": "Jones",
+      "age": 20,
+      "state": "CA",
+      "address": 210
+    },
+    "identity": 100,
+    "joins": {
+      "userAddresses": [
+        {
+          "table": "addresses",
+          "value": {
+            "id": 210,
+            "address": "1000 First Avenue",
+            "city": "San Francisco",
+            "state": "CA",
+            "zip": 11135
+          },
+          "identity": 210,
+          "joins": {
+            "addressStates": [
+              {
+                "table": "states",
+                "value": {
+                  "abbr": "CA",
+                  "label": "California"
+                },
+                "identity": "CA",
+                "joins": null
+              }
+            ]
+          }
+        }
+      ]
+    }
+  },
+  {
+    "table": "users",
+    "value": {
+      "name": "Beta",
+      "gender": "male",
+      "id": 101,
+      "last": "Smith",
+      "age": 30,
+      "state": "CA"
+    },
+    "identity": 101,
+    "joins": null
+  },
+  {
+    "table": "users",
+    "value": {
+      "name": "Gamma",
+      "gender": "female",
+      "id": 102,
+      "last": "Jones",
+      "age": 40,
+      "state": "OR",
+      "address": 290
+    },
+    "identity": 102,
+    "joins": {
+      "userAddresses": [
+        {
+          "table": "addresses",
+          "value": {
+            "id": 290,
+            "address": "44 Los Angeles Dr",
+            "city": "Simi Valley",
+            "state": "CA",
+            "zip": 93065
+          },
+          "identity": 290,
+          "joins": {
+            "addressStates": [
+              {
+                "table": "states",
+                "value": {
+                  "abbr": "CA",
+                  "label": "California"
+                },
+                "identity": "CA",
+                "joins": null
+              }
+            ]
+          }
+        }
+      ]
+    }
+  },
+  {
+    "table": "users",
+    "value": {
+      "name": "Delta",
+      "gender": "male",
+      "id": 103,
+      "last": "Smith",
+      "age": 20,
+      "state": "CA",
+      "address": 280
+    },
+    "identity": 103,
+    "joins": {
+      "userAddresses": [
+        {
+          "table": "addresses",
+          "value": {
+            "id": 280,
+            "address": "400 4th Ave",
+            "city": "Portland",
+            "state": "OR",
+            "zip": 97205
+          },
+          "identity": 280,
+          "joins": {
+            "addressStates": [
+              {
+                "table": "states",
+                "value": {
+                  "abbr": "OR",
+                  "label": "Oregon"
+                },
+                "identity": "OR",
+                "joins": null
+              }
+            ]
+          }
+        }
+      ]
+    }
+  }
+]

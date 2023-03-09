@@ -5,7 +5,7 @@ import {
   JoinObj,
   QueryDefObj,
   QueryObj,
-  TableObj, isTableConfig
+  TableObj, isTableConfig, TableConfig, BaseTableConfig
 } from './types'
 import Table from './Table'
 import { TransactionSet } from '@wonderlandlabs/transact'
@@ -20,11 +20,7 @@ export class Base implements BaseObj {
   constructor(config: BaseConfig) {
     if (config.tables) {
       c(config.tables).forEach((config, name) => {
-        if (isTableConfig(config)) {
-          this.tables.set(config.name, new Table(this, config));
-        } else {
-          this.tables.set(name, new Table(this, { ...config, name: name }));
-        }
+        this.addTable(config, name);
       })
     }
 
@@ -81,4 +77,15 @@ export class Base implements BaseObj {
   query(def: QueryDefObj): QueryObj {
     return new Query(this, def);
   }
+
+  public addTable(config: BaseTableConfig | TableConfig, name?: string) {
+    if (isTableConfig(config)) {
+      this.tables.set(config.name, new Table(this, config));
+    } else if (name) {
+      this.tables.set(name, new Table(this, { ...config, name: name }));
+    } else {
+      throw new Error('addTable: no name for table');
+    }
+  }
+
 }

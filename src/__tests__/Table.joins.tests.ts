@@ -21,14 +21,14 @@ describe('Table', () => {
       const [bob] = addressUsers;
 
       it('can get bob\'s address', () => {
-        const addresses = userAddresses.toRecordsForArray(bob.id) as AddressRecord[];
+        const addresses = userAddresses.toRecordsArray(bob.id) as AddressRecord[];
         const [bobAddress, next] = addresses;
         expect(bobAddress.address).toBe('1000 First Avenue');
         expect(next).toBeUndefined();
       });
 
       it('can get addresses for state', () => {
-        const [address1, address2, next] = addressStates.toRecordsForArray('CA') as AddressRecord[];
+        const [address1, address2, next] = addressStates.toRecordsArray('CA') as AddressRecord[];
         expect(new Set([address1.city, address2.city])).toEqual(
           new Set(['San Francisco', 'Simi Valley'])
         );
@@ -43,14 +43,14 @@ describe('Table', () => {
           throw new Error('no Bob');
         }
 
-        const users = userAddresses?.fromRecordsForArray(10) as UsersRecord[];
+        const users = userAddresses?.fromRecordsArray(10) as UsersRecord[];
         const [bob, next] = users;
         expect(bob.name).toBe('Bob');
         expect(next).toBeUndefined();
       });
 
       it('can get state for address id', () => {
-        const [state, next] = addressStates.fromRecordsForArray(10) as StateRecord[];
+        const [state, next] = addressStates.fromRecordsArray(10) as StateRecord[];
         expect(state.label).toBe('California');
         expect(next).toBeUndefined();
       });

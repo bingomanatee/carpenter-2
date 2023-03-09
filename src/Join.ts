@@ -3,7 +3,7 @@ import {
   dataMap, identityMap,
   isFieldDef,
   isJoinIdentityDef,
-  isKeygenDef,
+  isKeygenDef, isScalar,
   JoinConfig,
   JoinDef, joinDirection, JoinFieldDef, JoinKeygenDef,
   JoinObj, JoinObjType,
@@ -12,6 +12,8 @@ import {
 } from './types'
 import { collectObj } from '@wonderlandlabs/collect/lib/types'
 import { c } from '@wonderlandlabs/collect'
+import { TableItemClass } from './TableItemClass'
+import { from } from 'rxjs'
 
 function recordsForMidKeys(midKeys: unknown[], reverseIndex: dataMap, table: TableObj) {
   const map = new Map();
@@ -27,6 +29,18 @@ function recordsForMidKeys(midKeys: unknown[], reverseIndex: dataMap, table: Tab
   });
 
   return map;
+}
+
+function identitiesForMidKeys(midKeys: unknown[], reverseIndex: dataMap): unknown[] {
+  const matchingIdentities = new Set();
+  midKeys.forEach((midKey) => {
+    if (reverseIndex.has(midKey)) {
+      const endIdentity = reverseIndex.get(midKey);
+      endIdentity.forEach((identity: unknown) => matchingIdentities.add(identity));
+    }
+  });
+
+  return Array.from(matchingIdentities.values());
 }
 
 function extractFieldDef(def: JoinFieldDef, record: unknown) {
@@ -72,7 +86,8 @@ function extractKeyGenDef(def: JoinKeygenDef, record: unknown, identity: unknown
 
 export default class Join implements JoinObj {
 
-  constructor(private config: JoinConfig, private base: BaseObj) {}
+  constructor(private config: JoinConfig, private base: BaseObj) {
+  }
 
   $type: JoinObjType = 'JoinObj';
 
@@ -146,10 +161,6 @@ export default class Join implements JoinObj {
     return this.base.table(this.toDef.table) ?? (() => {
       throw(`cannot find table ${this.toDef.table}`)
     })()
-  }
-
-  get toColl() {
-    return this.toTable?.$coll || emptyColl
   }
 
   /**
@@ -243,22 +254,6 @@ export default class Join implements JoinObj {
     return this._toIndexReverse;
   }
 
-  /**
-   * for situations in which
-   * @param fromIdentity
-   * @param toIdentity
-   */
-  linkVia(fromIdentity: unknown, toIdentity: unknown) {
-    if (!this.config.via) {
-      throw new Error(`cannot join records for non-intrinsic relationship ${this.name}`);
-    }
-    const link: JoinPair = { from: fromIdentity, to: toIdentity }
-    if (this.intrinsic.hasValue(link)) {
-      this.intrinsic.append(link);
-      this.purgeIndexes();
-    }
-  }
-
   get strategy(): joinStrategy {
     if (isFieldDef(this.fromDef)) {
       if (isFieldDef(this.toDef)) {
@@ -340,42 +335,100 @@ export default class Join implements JoinObj {
           }
         }
         break;
+
+      case 'via':
+        this.linkVia(fromIdentity, toIdentity)
+        break
     }
   }
 
-  toRecordsFor(identity: unknown): dataMap {
+  private get viaTableName() {
+    if (typeof this.config.via === 'string' && this.config.via) {
+      return this.config.via;
+    }
+    return this.name + '$via';
+  }
 
-    let midKeys: unknown[];
-    if (isJoinIdentityDef(this.fromDef)) {
-      if (isJoinIdentityDef(this.toDef)) {
-        if (this.toTable.has(identity)) {
-          return new Map([[
-            identity, this.toTable.get(identity)
-          ]]);
+  viaKeys(data: unknown) {
+    const toTableName = this.toTable.name;
+    const fromTableName = this.fromTable.name;
+    const coll = c(data);
+    const fromId = coll.get(fromTableName);
+    const toId = coll.get(toTableName);
+    return { fromId, toId };
+  }
+
+  private initVia() {
+    const self = this;
+    this.base.addTable({
+      identityFromRecord(data) {
+        const { fromId, toId } = self.viaKeys(data);
+        return `${fromId}_$via$_${toId}`
+      },
+      onCreate(data: unknown) {
+        if (!(data && typeof data === 'object' && self.fromTable.name in data && self.toTable.name in data)) {
+          throw new Error(self.viaTableName + ' missing table fields');
         }
-      }
-      midKeys = [identity]
-    } else {
-      midKeys = this.fromIndex.get(identity);
-    }
+        const { fromId, toId } = self.viaKeys(data);
 
-    return midKeys.length ? recordsForMidKeys(midKeys, this.toIndexReverse, this.toTable) : emptyMap
+        if (!(isScalar(fromId) && isScalar(toId))) {
+          throw new Error('via/intrinsic joins require scalar identities');
+        }
+        return data;
+      }
+    }, this.viaTableName);
   }
 
-  fromIdentities(identity: unknown): unknown[] {
-    if (!this.fromIndex.has(identity)) {
+  private get viaTable() {
+    if (!this.config.via) {
+      return null;
+    }
+    if (!this.base.has(this.viaTableName)) {
+      this.initVia();
+    }
+    return this.base.table(this.viaTableName);
+  }
+
+  private linkVia(fromIdentity: unknown, toIdentity: unknown) {
+    if (!this.base.has(this.viaTableName)) {
+      this.initVia();
+    }
+
+    const viaIdentity = `${fromIdentity}_$via$_${toIdentity}`;
+    if (!this.viaTable?.has(viaIdentity)) {
+      const toTableName = this.toTable.name;
+      const fromTableName = this.fromTable.name;
+      this.viaTable?.$set(viaIdentity, { [fromTableName]: fromIdentity, [toTableName]: toIdentity })
+    }
+  }
+
+  toRecordsMap(fromIdentities: unknown): dataMap {
+    return this.fromIdentities(fromIdentities).reduce((map: dataMap, identity) => {
+      map.set(identity, this.toTable.get(identity));
+      return map;
+    }, new Map()) as dataMap;
+  }
+
+  fromIdentities(toIdentity: unknown): unknown[] {
+
+    if (this.config.via) {
+      return this.toIndex.get(toIdentity);
+    }
+
+    if (!this.toIndex.has(toIdentity)) {
+      // console.log('cannot find ', toIdentity, 'in ', this.toTable.name);
       return [];
     }
-    const midKeys = this.fromIndex.get(identity);
-    let identities = midKeys.map((midId: unknown) => this.toIndexReverse.get(midId) || []).flat();
-    const idSet = new Set(identities);
-    return Array.from(idSet.values());
+    const midKeys = this.toIndex.get(toIdentity);
+    const identities = identitiesForMidKeys(midKeys, this.fromIndexReverse);
+    // console.log('getting fromIdentities for ', toIdentity, 'midKeys are ', midKeys, 'got', identities);
+    return identities;
   }
 
-  from(identities: unknown[]): identityMap {
+  fromIdentitiesMap(toIdentities: unknown[]): identityMap {
     const out = new Map();
 
-    identities.forEach((id) => {
+    toIdentities.forEach((id) => {
       const identities = this.fromIdentities(id);
       if (identities.length) {
         out.set(id, identities)
@@ -385,42 +438,41 @@ export default class Join implements JoinObj {
     return out;
   }
 
-  toIdentities(identity: unknown): unknown[] {
-    if (!this.toIndex.has(identity)) {
+  toIdentities(fromIdentity: unknown): unknown[] {
+    if (this.config.via) {
+      return this.fromIndex.get(fromIdentity);
+    }
+
+    if (!this.fromIndex.has(fromIdentity)) {
       return [];
     }
-    const midKeys = this.toIndex.get(identity);
-    let identities = midKeys.map((midId: unknown) => this.fromIndexReverse.get(midId) || []).flat();
-    const idSet = new Set(identities);
-    return Array.from(idSet.values());
+    const midKeys = this.fromIndex.get(fromIdentity);
+    const identities = identitiesForMidKeys(midKeys, this.toIndexReverse);
+  // console.log('getting toIdentities for ', fromIdentity, 'midKeys are ', midKeys, 'got', identities);
+    return identities;
   }
 
-  to(identities: unknown[]): identityMap {
+  toIdentitiesMap(fromIdentities: unknown[]): identityMap {
     const out = new Map();
 
-    identities.forEach((id) => {
-      const toIds = this.toIdentities(id);
+    fromIdentities.forEach((fromIdentity) => {
+      const toIds = this.toIdentities(fromIdentity);
       if (toIds.length) {
-        out.set(id, toIds)
+        out.set(fromIdentity, toIds)
       }
     });
 
     return out;
   }
 
-  toRecordsForArray(fromIdentity: unknown): unknown[] {
-    const map = this.toRecordsFor(fromIdentity);
-    if (!map.size) {
-      return [];
-    }
-    return Array.from(map.values());
+  toRecordsArray(fromIdentity: unknown): unknown[] {
+    return this.toIdentities(fromIdentity).map((identity: unknown) => this.toTable.get(identity));
   }
 
-  fromRecordsFor(identity: unknown): dataMap {
+  fromRecordsMap(identity: unknown): dataMap {
     let midKeys: unknown[];
     if (isJoinIdentityDef(this.toDef)) {
       if (isJoinIdentityDef(this.fromDef)) {
-
         if (this.fromTable.has(identity)) {
           return new Map([[
             identity, this.fromTable.get(identity)
@@ -436,12 +488,8 @@ export default class Join implements JoinObj {
     return midKeys.length ? recordsForMidKeys(midKeys, this.fromIndexReverse, this.fromTable) : emptyMap
   }
 
-  fromRecordsForArray(toIdentity: unknown): unknown[] {
-    const map = this.fromRecordsFor(toIdentity)
-    if (!map.size) {
-      return [];
-    }
-    return Array.from(map.values());
+  fromRecordsArray(toIdentity: unknown): unknown[] {
+    return this.fromIdentities(toIdentity).map((identity: unknown) => this.fromTable.get(identity));
   }
 }
 

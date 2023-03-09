@@ -215,7 +215,7 @@ export default class Table implements TableObj {
   }
 
   get(identity: unknown) {
-    return this.$records.get(identity)
+    return this.$coll.get(identity)
   }
 
   getMany(identities: unknown[]): dataMap {
@@ -302,14 +302,13 @@ export default class Table implements TableObj {
     } else if (isJoinTermTableNameBase(term)) {
       // @TODO: detect self-joins
       const {tableName} = term;
-      console.log('looking for a linkVia to ', tableName);
+
       // requesting a match to the other side of the JoinTerm
       let matches = Array.from(this.joins.values()).filter((joinItem: JoinItem) => {
         return joinItem.join.fromTable.name === tableName
           || joinItem.join.toTable.name === tableName;
       });
 
-      console.log('matches:', matches);
       switch (matches.length) {
         case 0:
           throw new Error(`no matching joins for ${tableName}`);
@@ -334,7 +333,6 @@ export default class Table implements TableObj {
         throw new Error('bad $joinFromTerm table');
       }
     }
-    console.log('$joinFromTerm returning ', direction, 'join', join);
     return { join, direction }
   }
 }

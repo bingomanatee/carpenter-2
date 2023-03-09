@@ -70,17 +70,17 @@ export default class Query implements QueryObj {
       throw new Error(`cannot retrieve join ${joinDef.joinName} from ${items[0].table.name || '<missing table>'}`);
     }
 
-    items?.forEach((ts, index) => {
+    items?.forEach((ts) => {
 
       let ids: unknown[];
       let table: TableObj;
 
       if (joinItem.direction === 'from') {
         table = joinItem.join.toTable
-        ids = joinItem.join.fromIdentities(ts.identity)
+        ids = joinItem.join.toIdentities(ts.identity)
       } else {
         table = joinItem.join.fromTable
-        ids = joinItem.join.toIdentities(ts.identity)
+        ids = joinItem.join.fromIdentities(ts.identity)
       }
 
       if (!ids.length) {
