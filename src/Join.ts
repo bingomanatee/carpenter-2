@@ -149,13 +149,6 @@ export default class Join implements JoinObj {
    * that matches an exposed key in toIndex.
    */
   _fromIndexReverse?: dataMap
-  _fromIsIdentity?: boolean
-  public get fromIsIdentity() {
-    if (typeof this._fromIsIdentity !== 'boolean') {
-      this._fromIsIdentity = isJoinIdentityDef(this.fromDef);
-    }
-    return this._fromIsIdentity
-  }
 
   get fromIndexReverse(): dataMap {
     if (!this._fromIndexReverse) {
@@ -381,7 +374,7 @@ export default class Join implements JoinObj {
       return [];
     }
 
-    if (this.fromIsIdentity || this.isVia) {
+    if (this.from.isIdentity || this.isVia) {
       return this.toIndex.get(toIdentity)
     }
     return identitiesForMidKeys(this.toIndex.get(toIdentity), this.fromIndexReverse);
@@ -497,7 +490,7 @@ class JoinManager implements JoinManagerObj {
       } else {
         this._index = this.table.$coll.getMap((record, identity) => {
           let out: any[] = [];
-          if (this.join.fromIsIdentity) {
+          if (this.join.from.isIdentity) {
             return [identity]
           } else if (isFieldDef(this.fromDef)) {
             out = extractFieldDef(this.fromDef, record);
@@ -507,6 +500,14 @@ class JoinManager implements JoinManagerObj {
       }
     }
     return this._index || emptyMap
+  }
+
+  _isIdentity?: boolean
+  public get isIdentity() {
+    if (typeof this._isIdentity !== 'boolean') {
+      this._isIdentity = isJoinIdentityDef(this.fromDef);
+    }
+    return this._isIdentity
   }
 }
 

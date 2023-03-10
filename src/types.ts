@@ -239,6 +239,7 @@ export type JoinManagerObj = {
   index: dataMap,
   fromDef: JoinDef,
   table: TableObj,
+  isIdentity: boolean
   purgeIndexes(): void,
 }
 export interface JoinObj {
@@ -246,7 +247,6 @@ export interface JoinObj {
   toTable: TableObj,
   $type: JoinObjType,
   isVia: boolean,
-  fromIsIdentity: boolean,
   indexVia(): void,
   toRecordsMap(fromIdentity: unknown): dataMap,
   toRecordsArray(fromIdentity: unknown): unknown[],
