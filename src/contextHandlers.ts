@@ -81,7 +81,7 @@ export const contextHandlers = ((base: BaseObj) => {
             record = table.processData(data);
             identity = table.identityFor(record);
             if (identity === undefined) {
-              throw Object.assign(new Error('add: cannot add unidentified record to table ' + table.name),
+              throw Object.assign(new Error('add: cannot add unidentified record to t ' + table.name),
                 {
                   data,
                   table: table.name

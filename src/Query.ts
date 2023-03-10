@@ -72,7 +72,7 @@ export default class Query implements QueryObj {
     if (isQueryJoinDefJoinName(joinDef)) {
       joinItem = items[0].table.joins.get(joinDef.joinName) || null;
       if (!joinItem) {
-        throw new Error(`cannot retrieve join ${joinDef.joinName} from ${items[0].table.name || '<missing table>'}`);
+        throw new Error(`cannot retrieve join ${joinDef.joinName} from ${items[0].table.name || '<missing t>'}`);
       }
     } else if (isQueryJoinDefTableName(joinDef)) {
       joinItem = items[0].table.$joinFromTableName(joinDef.tableName)

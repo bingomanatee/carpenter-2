@@ -43,8 +43,8 @@ describe('Queries', () => {
           }
         });
         const fullNames = query.value.map((tr: TableItem) => {
-          const value = tr.val as Record<string, any>
-          return value.fullName;
+          const val = tr.val as Record<string, any>
+          return val.fullName;
         });
         expect(fullNames).toEqual([
           'Alpha Jones',
@@ -344,7 +344,7 @@ describe('Queries', () => {
 
       expect(values).toEqual(
         [{
-          "table": "users",
+          "t": "users",
           "val": {
             "name": "Alpha",
             "gender": "male",
@@ -357,7 +357,7 @@ describe('Queries', () => {
           "id": 100,
           "$": {
             "userAddresses": [{
-              "table": "addresses",
+              "t": "addresses",
               "val": {
                 "id": 210,
                 "address": "1000 First Avenue",
@@ -369,11 +369,11 @@ describe('Queries', () => {
             }]
           }
         }, {
-          "table": "users",
+          "t": "users",
           "val": { "name": "Beta", "gender": "male", "id": 101, "last": "Smith", "age": 30, "state": "CA" },
           "id": 101
         }, {
-          "table": "users",
+          "t": "users",
           "val": {
             "name": "Gamma",
             "gender": "female",
@@ -386,7 +386,7 @@ describe('Queries', () => {
           "id": 102,
           "$": {
             "userAddresses": [{
-              "table": "addresses",
+              "t": "addresses",
               "val": {
                 "id": 290,
                 "address": "44 Los Angeles Dr",
@@ -398,7 +398,7 @@ describe('Queries', () => {
             }]
           }
         }, {
-          "table": "users",
+          "t": "users",
           "val": {
             "name": "Delta",
             "gender": "male",
@@ -411,7 +411,7 @@ describe('Queries', () => {
           "id": 103,
           "$": {
             "userAddresses": [{
-              "table": "addresses",
+              "t": "addresses",
               "val": { "id": 280, "address": "400 4th Ave", "city": "Portland", "state": "OR", "zip": 97205 },
               "id": 280
             }]
@@ -429,12 +429,12 @@ describe('Queries', () => {
 
       expect(values).toEqual(
         [{
-          "table": "states",
+          "t": "states",
           "val": { "abbr": "CA", "label": "California" },
           "id": "CA",
           "$": {
             "addressStates": [{
-              "table": "addresses",
+              "t": "addresses",
               "val": {
                 "id": 210,
                 "address": "1000 First Avenue",
@@ -444,7 +444,7 @@ describe('Queries', () => {
               },
               "id": 210
             }, {
-              "table": "addresses",
+              "t": "addresses",
               "val": {
                 "id": 230,
                 "address": "1010 Simi Valley Dr",
@@ -454,7 +454,7 @@ describe('Queries', () => {
               },
               "id": 230
             }, {
-              "table": "addresses",
+              "t": "addresses",
               "val": {
                 "id": 240,
                 "address": "666 Buffalo Avenue",
@@ -464,7 +464,7 @@ describe('Queries', () => {
               },
               "id": 240
             }, {
-              "table": "addresses",
+              "t": "addresses",
               "val": {
                 "id": 260,
                 "address": "444 Simi Valley Dr",
@@ -474,7 +474,7 @@ describe('Queries', () => {
               },
               "id": 260
             }, {
-              "table": "addresses",
+              "t": "addresses",
               "val": {
                 "id": 270,
                 "address": "1000 Harrison St",
@@ -484,7 +484,7 @@ describe('Queries', () => {
               },
               "id": 270
             }, {
-              "table": "addresses",
+              "t": "addresses",
               "val": {
                 "id": 290,
                 "address": "44 Los Angeles Dr",
@@ -496,16 +496,16 @@ describe('Queries', () => {
             }]
           }
         }, {
-          "table": "states",
+          "t": "states",
           "val": { "abbr": "OR", "label": "Oregon" },
           "id": "OR",
           "$": {
             "addressStates": [{
-              "table": "addresses",
+              "t": "addresses",
               "val": { "id": 220, "address": "3317 NE 15th", "city": "Portland", "state": "OR", "zip": 97205 },
               "id": 220
             }, {
-              "table": "addresses",
+              "t": "addresses",
               "val": {
                 "id": 250,
                 "address": "101 Multnomah Avenue",
@@ -515,12 +515,12 @@ describe('Queries', () => {
               },
               "id": 250
             }, {
-              "table": "addresses",
+              "t": "addresses",
               "val": { "id": 280, "address": "400 4th Ave", "city": "Portland", "state": "OR", "zip": 97205 },
               "id": 280
             }]
           }
-        }, { "table": "states", "val": { "abbr": "WA", "label": "Washington" }, "id": "WA" }]
+        }, { "t": "states", "val": { "abbr": "WA", "label": "Washington" }, "id": "WA" }]
       );
     });
 
@@ -560,7 +560,7 @@ describe('Queries', () => {
         const base = makeBase([{ id: 1, gender: Gender.male, name: 'Bob' }], westCoast, []);
         const userTable = base.table('users');
         if (!userTable) {
-          throw new Error('no user table');
+          throw new Error('no user t');
         }
 
         userTable.join(1, {
@@ -580,12 +580,12 @@ describe('Queries', () => {
         });
 
         expect(userWithAddr.toJSON).toEqual([{
-            "table": "users",
+            "t": "users",
             "val": { "name": "Bob", "gender": "male", "id": 1, "address": 10 },
             "id": 1,
             "$": {
               "userAddresses": [{
-                "table": "addresses",
+                "t": "addresses",
                 "val": { "id": 10, "address": "1000 11th Ave", "city": "Seattle", "state": "WA", "zip": 10133 },
                 "id": 10
               }]
@@ -612,12 +612,12 @@ describe('Queries', () => {
         });
 
         expect(studentClasses?.toJSON).toEqual([{
-            "table": "students",
+            "t": "students",
             "val": { "name": "Bob", "studentId": "Qm9i" },
             "id": "Qm9i",
             "$": {
               "studentsToClasses": [{
-                "table": "classes",
+                "t": "classes",
                 "val": { "name": "Physics", "program": "Science", "id": "PHYS101" },
                 "id": "PHYS101"
               }]

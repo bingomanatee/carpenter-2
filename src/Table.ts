@@ -153,13 +153,13 @@ export default class Table implements TableObj {
    *    array pairs [record, identityFromRecord]
    *    object records {$record, $identityFromRecord?}
    *    records (any other return val taken as a record)
-   *         --- if a record is generated, the table MUST have an identityFromRecord function
+   *         --- if a record is generated, the t MUST have an identityFromRecord function
    *
    * that means if you want to return a record that _is_ an array
    * you must either wrap it in an array or return it
    * as {$record: myArray, $identityFromRecord: myKey}
    *
-   * @param generator *(table) => iter
+   * @param generator *(t) => iter
    * @param replace {boolean} -- whether to add new data over current set
    *                             or COMPLETELY replace collection with generated set
    */

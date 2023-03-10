@@ -357,7 +357,7 @@ export default class Join implements JoinObj {
       },
       onCreate(data: unknown) {
         if (!(data && typeof data === 'object' && self.fromTable.name in data && self.toTable.name in data)) {
-          throw new Error(self.viaTableName + ' missing table fields');
+          throw new Error(self.viaTableName + ' missing t fields');
         }
         const { fromId, toId } = self.viaKeys(data);
 
@@ -463,7 +463,7 @@ export default class Join implements JoinObj {
         }
       }
       midKeys = [identity]
-      // coerce the reversed map of from into records from the "to" table
+      // coerce the reversed map of from into records from the "to" t
     } else {
       midKeys = this.toIndex.get(identity);
     }

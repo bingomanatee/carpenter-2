@@ -276,7 +276,7 @@ export type TableItemBase = {
 export type tableItemJSONJoinRecord = Record<string, TableItemJSON[]>
 export type TableItemJSON = {
   $?: tableItemJSONJoinRecord
-  table: string
+  t: string
   id: unknown
 } & TableItemBase
 

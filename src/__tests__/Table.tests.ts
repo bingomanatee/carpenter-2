@@ -19,7 +19,7 @@ describe('Table', () => {
       const users = base.table('users') as TypedTableObj<number, UsersRecord>
       expect(users).toBeTruthy()
       if (!users) {
-        throw new Error('no users table');
+        throw new Error('no users t');
       }
       users.add({ name: 'Bob' });
       expect(users.get(1)?.name)

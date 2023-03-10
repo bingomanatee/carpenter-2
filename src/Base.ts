@@ -88,7 +88,7 @@ export class Base implements BaseObj {
     } else if (name) {
       this.tables.set(name, new Table(this, { ...config, name: name }));
     } else {
-      throw new Error('addTable: no name for table');
+      throw new Error('addTable: no name for t');
     }
   }
 

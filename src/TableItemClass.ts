@@ -24,7 +24,7 @@ export class TableItemClass implements TableItem {
   static toJSON(tc: TableItem): TableItemJSON {
 
     const base: TableItemJSON = {
-      table: tc.table.name,
+      t: tc.table.name,
       val: tc.val,
       id: tc.identity,
     }

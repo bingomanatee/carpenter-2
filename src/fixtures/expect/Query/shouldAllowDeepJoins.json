@@ -1,6 +1,6 @@
 [
   {
-    "table": "users",
+    "t": "users",
     "val": {
       "name": "Alpha",
       "gender": "male",
@@ -14,7 +14,7 @@
     "$": {
       "userAddresses": [
         {
-          "table": "addresses",
+          "t": "addresses",
           "val": {
             "id": 210,
             "address": "1000 First Avenue",
@@ -26,7 +26,7 @@
           "$": {
             "addressStates": [
               {
-                "table": "states",
+                "t": "states",
                 "val": {
                   "abbr": "CA",
                   "label": "California"
@@ -40,7 +40,7 @@
     }
   },
   {
-    "table": "users",
+    "t": "users",
     "val": {
       "name": "Beta",
       "gender": "male",
@@ -52,7 +52,7 @@
     "id": 101
   },
   {
-    "table": "users",
+    "t": "users",
     "val": {
       "name": "Gamma",
       "gender": "female",
@@ -66,7 +66,7 @@
     "$": {
       "userAddresses": [
         {
-          "table": "addresses",
+          "t": "addresses",
           "val": {
             "id": 290,
             "address": "44 Los Angeles Dr",
@@ -78,7 +78,7 @@
           "$": {
             "addressStates": [
               {
-                "table": "states",
+                "t": "states",
                 "val": {
                   "abbr": "CA",
                   "label": "California"
@@ -92,7 +92,7 @@
     }
   },
   {
-    "table": "users",
+    "t": "users",
     "val": {
       "name": "Delta",
       "gender": "male",
@@ -106,7 +106,7 @@
     "$": {
       "userAddresses": [
         {
-          "table": "addresses",
+          "t": "addresses",
           "val": {
             "id": 280,
             "address": "400 4th Ave",
@@ -118,7 +118,7 @@
           "$": {
             "addressStates": [
               {
-                "table": "states",
+                "t": "states",
                 "val": {
                   "abbr": "OR",
                   "label": "Oregon"
