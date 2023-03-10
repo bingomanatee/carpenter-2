@@ -93,7 +93,7 @@ export default class Query implements QueryObj {
         ids = joinItem.join.toIdentities(ts.identity)
       } else {
         table = joinItem.join.from.table
-        ids = joinItem.join.fromIdentities(ts.identity)
+        ids = joinItem.join.from.identities(ts.identity)
       }
 
       if (!ids.length) {

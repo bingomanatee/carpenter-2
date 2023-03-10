@@ -361,30 +361,17 @@ export default class Join implements JoinObj {
   }
 
   toRecordsMap(fromIdentities: unknown): dataMap {
-    return this.fromIdentities(fromIdentities).reduce((map: dataMap, identity) => {
+    return this.from.identities(fromIdentities).reduce((map: dataMap, identity) => {
       map.set(identity, this.toTable.get(identity));
       return map;
     }, new Map()) as dataMap;
-  }
-
-  fromIdentities(toIdentity: unknown): unknown[] {
-
-    if (!this.toIndex.has(toIdentity)) {
-      // console.log('cannot find ', toIdentity, 'in ', this.toTable.name);
-      return [];
-    }
-
-    if (this.from.isIdentity || this.isVia) {
-      return this.toIndex.get(toIdentity)
-    }
-    return identitiesForMidKeys(this.toIndex.get(toIdentity), this.fromIndexReverse);
   }
 
   fromIdentitiesMap(toIdentities: unknown[]): identityMap {
     const out = new Map();
 
     toIdentities.forEach((id) => {
-      const identities = this.fromIdentities(id);
+      const identities = this.from.identities(id);
       if (identities.length) {
         out.set(id, identities)
       }
@@ -440,7 +427,7 @@ export default class Join implements JoinObj {
   }
 
   fromRecordsArray(toIdentity: unknown): unknown[] {
-    return this.fromIdentities(toIdentity).map((identity: unknown) => this.from.table.get(identity));
+    return this.from.identities(toIdentity).map((identity: unknown) => this.from.table.get(identity));
   }
 
   public indexVia() {
@@ -508,6 +495,20 @@ class JoinManager implements JoinManagerObj {
       this._isIdentity = isJoinIdentityDef(this.fromDef);
     }
     return this._isIdentity
+  }
+
+
+  identities(toIdentity: unknown): unknown[] {
+
+    if (!this.join.toIndex.has(toIdentity)) {
+      // console.log('cannot find ', toIdentity, 'in ', this.toTable.name);
+      return [];
+    }
+
+    if (this.isIdentity || this.join.isVia) {
+      return this.join.toIndex.get(toIdentity)
+    }
+    return identitiesForMidKeys(this.join.toIndex.get(toIdentity), this.join.fromIndexReverse);
   }
 }
 
