@@ -93,6 +93,7 @@ function parseConfig(config: string | JoinDef) {
 
 export default class Join implements JoinObj {
   constructor(private config: JoinConfig, private base: BaseObj) {
+    this.from = new JoinManager(base, this.fromDef, this.fromTable, this);
   }
 
   $type: JoinObjType = 'JoinObj';
@@ -127,10 +128,10 @@ export default class Join implements JoinObj {
   }
 
   purgeIndexes() {
-    delete this._fromIndex;
     delete this._toIndex;
     delete this._fromIndexReverse;
     delete this._toIndexReverse;
+    this.from.purgeIndexes();
   }
 
   get isVia() {
@@ -153,39 +154,19 @@ export default class Join implements JoinObj {
    * fromIndex is a map of the record identityFromRecord to the exposed key
    * that matches an exposed key in toIndex.
    */
-  _fromIndex?: dataMap
   _fromIndexReverse?: dataMap
   _fromIsIdentity?: boolean
-  private get fromIsIdentity() {
+  public get fromIsIdentity() {
     if (typeof this._fromIsIdentity !== 'boolean') {
       this._fromIsIdentity = isJoinIdentityDef(this.fromDef);
     }
     return this._fromIsIdentity
   }
 
-  get fromIndex(): dataMap {
-    if (!this._fromIndex) {
-      if (this.isVia) {
-        this.indexVia();
-      } else {
-        this._fromIndex = this.fromTable.$coll.getMap((record, identity) => {
-          let out: any[] = [];
-          if (this.fromIsIdentity) {
-            return [identity]
-          } else if (isFieldDef(this.fromDef)) {
-            out = extractFieldDef(this.fromDef, record);
-          } // else what?
-          return out;
-        });
-      }
-    }
-    return this._fromIndex || emptyMap
-  }
-
   get fromIndexReverse(): dataMap {
     if (!this._fromIndexReverse) {
       const coll = new Map();
-      this.fromIndex.forEach((keys, identity) => {
+      this.from.index.forEach((keys, identity) => {
         keys.forEach((key: unknown) => {
           addToIndex(coll, key, identity);
         })
@@ -426,13 +407,13 @@ export default class Join implements JoinObj {
   }
 
   toIdentities(fromIdentity: unknown): unknown[] {
-    if (!this.fromIndex.has(fromIdentity)) {
+    if (!this.from.index.has(fromIdentity)) {
       return [];
     }
     if (this.toIsIdentity || this.isVia) {
-      return this.fromIndex.get(fromIdentity)
+      return this.from.index.get(fromIdentity)
     }
-    return identitiesForMidKeys(this.fromIndex.get(fromIdentity), this.toIndexReverse);
+    return identitiesForMidKeys(this.from.index.get(fromIdentity), this.toIndexReverse);
   }
 
   toIdentitiesMap(fromIdentities: unknown[]): identityMap {
@@ -475,8 +456,8 @@ export default class Join implements JoinObj {
     return this.fromIdentities(toIdentity).map((identity: unknown) => this.fromTable.get(identity));
   }
 
-  private indexVia() {
-    this._fromIndex = new Map();
+  public indexVia() {
+    this.from.index = new Map();
     this._toIndex = new Map();
     const fromKey = this.fromTable.name;
     const toKey = this.toTable.name;
@@ -485,12 +466,50 @@ export default class Join implements JoinObj {
         const viaItem = keys as Record<string, unknown>;
         const { [fromKey]: fromIndex, [toKey]: toIndex } = viaItem;
 
-        addToIndex(this._fromIndex, fromIndex, toIndex);
+        addToIndex(this.from.index, fromIndex, toIndex);
         addToIndex(this._toIndex, toIndex, fromIndex);
       }
     }
   }
+
+  from: JoinManager
+}
+
+type JoinManagerObj = {
+  index: dataMap,
+  fromDef: JoinDef,
+  fromTable: TableObj,
+  purgeIndexes(): void,
+}
+
+class JoinManager implements JoinManagerObj {
+  constructor(private base: BaseObj, public fromDef: JoinDef, public fromTable: TableObj, private join: JoinObj) {}
+
+  purgeIndexes() {
+    delete this._index;
+  }
+  private _index?: dataMap
+  set index(map: dataMap) {
+    this._index = map;
+  }
+  get index(): dataMap {
+    if (!this._index) {
+      if (this.join.isVia) {
+        this.join.indexVia();
+      } else {
+        this._index = this.fromTable.$coll.getMap((record, identity) => {
+          let out: any[] = [];
+          if (this.join.fromIsIdentity) {
+            return [identity]
+          } else if (isFieldDef(this.fromDef)) {
+            out = extractFieldDef(this.fromDef, record);
+          } // else what?
+          return out;
+        });
+      }
+    }
+    return this._index || emptyMap
+  }
 }
 
 const emptyMap = new Map()
-const emptyColl = c(emptyMap);

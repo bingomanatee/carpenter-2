@@ -242,6 +242,8 @@ export interface JoinObj {
   toTable: TableObj,
   $type: JoinObjType,
   isVia: boolean,
+  fromIsIdentity: boolean,
+  indexVia(): void,
   toRecordsMap(fromIdentity: unknown): dataMap,
   toRecordsArray(fromIdentity: unknown): unknown[],
   fromRecordsMap(toIdentity: unknown): dataMap,
