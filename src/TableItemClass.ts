@@ -1,6 +1,6 @@
-import { joinsMap, TableObj } from './types'
+import { joinsMap, TableItem, tableItemJoinMap, TableItemJSON, tableItemJSONJoinRecord, TableObj } from './types'
 
-export class TableItemClass {
+export class TableItemClass implements TableItem {
   constructor(public readonly table: TableObj, public readonly identity: unknown, private _value?: unknown) {
   }
 
@@ -8,7 +8,7 @@ export class TableItemClass {
     return this.table.get(this.identity);
   }
 
-  get value() {
+  get val() {
     if (this._value === undefined) {
       return this.data;
     }
@@ -21,21 +21,22 @@ export class TableItemClass {
 
   public joins?: joinsMap
 
-  static toJSON(tc: TableItemClass) {
-    return {
+  static toJSON(tc: TableItem): TableItemJSON {
+
+    const base: TableItemJSON = {
       table: tc.table.name,
-      value: tc.value,
-      identity: tc.identity,
-      joins: m2s(tc.joins)
+      val: tc.val,
+      id: tc.identity,
     }
+    if (tc.joins) {
+      base.$ = m2s(tc.joins);
+    }
+    return base;
   }
 }
 
-function m2s(joins: unknown) {
-  if (joins instanceof Map) {
-    const out: Record<string, any> = {};
-    joins.forEach((item, key) => out[`${key}`] = item.map(TableItemClass.toJSON));
-    return out;
-  }
-  return null;
+function m2s(joins: tableItemJoinMap): tableItemJSONJoinRecord {
+  const out: Record<string, TableItemJSON[]> = {};
+  joins.forEach((item, key) => out[`${key}`] = item.map(TableItemClass.toJSON));
+  return out;
 }

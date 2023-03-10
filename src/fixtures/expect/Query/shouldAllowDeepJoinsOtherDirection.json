@@ -1,28 +1,28 @@
 [
   {
     "table": "states",
-    "value": {
+    "val": {
       "abbr": "CA",
       "label": "California"
     },
-    "identity": "CA",
-    "joins": {
+    "id": "CA",
+    "$": {
       "addressStates": [
         {
           "table": "addresses",
-          "value": {
+          "val": {
             "id": 210,
             "address": "1000 First Avenue",
             "city": "San Francisco",
             "state": "CA",
             "zip": 11135
           },
-          "identity": 210,
-          "joins": {
+          "id": 210,
+          "$": {
             "userAddresses": [
               {
                 "table": "users",
-                "value": {
+                "val": {
                   "name": "Alpha",
                   "gender": "male",
                   "id": 100,
@@ -31,27 +31,26 @@
                   "state": "CA",
                   "address": 210
                 },
-                "identity": 100,
-                "joins": null
+                "id": 100
               }
             ]
           }
         },
         {
           "table": "addresses",
-          "value": {
+          "val": {
             "id": 230,
             "address": "1010 Simi Valley Dr",
             "city": "Simi Valley",
             "state": "CA",
             "zip": 93065
           },
-          "identity": 230,
-          "joins": {
+          "id": 230,
+          "$": {
             "userAddresses": [
               {
                 "table": "users",
-                "value": {
+                "val": {
                   "name": "Kappa",
                   "gender": "female",
                   "id": 108,
@@ -60,27 +59,26 @@
                   "state": "WA",
                   "address": 230
                 },
-                "identity": 108,
-                "joins": null
+                "id": 108
               }
             ]
           }
         },
         {
           "table": "addresses",
-          "value": {
+          "val": {
             "id": 240,
             "address": "666 Buffalo Avenue",
             "city": "San Francisco",
             "state": "CA",
             "zip": 11135
           },
-          "identity": 240,
-          "joins": {
+          "id": 240,
+          "$": {
             "userAddresses": [
               {
                 "table": "users",
-                "value": {
+                "val": {
                   "name": "Iota",
                   "gender": "male",
                   "id": 107,
@@ -89,27 +87,26 @@
                   "state": "WA",
                   "address": 240
                 },
-                "identity": 107,
-                "joins": null
+                "id": 107
               }
             ]
           }
         },
         {
           "table": "addresses",
-          "value": {
+          "val": {
             "id": 260,
             "address": "444 Simi Valley Dr",
             "city": "Simi Valley",
             "state": "CA",
             "zip": 93065
           },
-          "identity": 260,
-          "joins": {
+          "id": 260,
+          "$": {
             "userAddresses": [
               {
                 "table": "users",
-                "value": {
+                "val": {
                   "name": "Zeta",
                   "gender": "male",
                   "id": 105,
@@ -118,27 +115,26 @@
                   "state": "WA",
                   "address": 260
                 },
-                "identity": 105,
-                "joins": null
+                "id": 105
               }
             ]
           }
         },
         {
           "table": "addresses",
-          "value": {
+          "val": {
             "id": 270,
             "address": "1000 Harrison St",
             "city": "San Francisco",
             "state": "CA",
             "zip": 98403
           },
-          "identity": 270,
-          "joins": {
+          "id": 270,
+          "$": {
             "userAddresses": [
               {
                 "table": "users",
-                "value": {
+                "val": {
                   "name": "Epsilon",
                   "gender": "female",
                   "id": 104,
@@ -147,27 +143,26 @@
                   "state": "OR",
                   "address": 270
                 },
-                "identity": 104,
-                "joins": null
+                "id": 104
               }
             ]
           }
         },
         {
           "table": "addresses",
-          "value": {
+          "val": {
             "id": 290,
             "address": "44 Los Angeles Dr",
             "city": "Simi Valley",
             "state": "CA",
             "zip": 93065
           },
-          "identity": 290,
-          "joins": {
+          "id": 290,
+          "$": {
             "userAddresses": [
               {
                 "table": "users",
-                "value": {
+                "val": {
                   "name": "Gamma",
                   "gender": "female",
                   "id": 102,
@@ -176,8 +171,7 @@
                   "state": "OR",
                   "address": 290
                 },
-                "identity": 102,
-                "joins": null
+                "id": 102
               }
             ]
           }
@@ -187,28 +181,28 @@
   },
   {
     "table": "states",
-    "value": {
+    "val": {
       "abbr": "OR",
       "label": "Oregon"
     },
-    "identity": "OR",
-    "joins": {
+    "id": "OR",
+    "$": {
       "addressStates": [
         {
           "table": "addresses",
-          "value": {
+          "val": {
             "id": 220,
             "address": "3317 NE 15th",
             "city": "Portland",
             "state": "OR",
             "zip": 97205
           },
-          "identity": 220,
-          "joins": {
+          "id": 220,
+          "$": {
             "userAddresses": [
               {
                 "table": "users",
-                "value": {
+                "val": {
                   "name": "Lambda",
                   "gender": "male",
                   "id": 109,
@@ -217,27 +211,26 @@
                   "state": "OR",
                   "address": 220
                 },
-                "identity": 109,
-                "joins": null
+                "id": 109
               }
             ]
           }
         },
         {
           "table": "addresses",
-          "value": {
+          "val": {
             "id": 250,
             "address": "101 Multnomah Avenue",
             "city": "Portland",
             "state": "OR",
             "zip": 97205
           },
-          "identity": 250,
-          "joins": {
+          "id": 250,
+          "$": {
             "userAddresses": [
               {
                 "table": "users",
-                "value": {
+                "val": {
                   "name": "Eta",
                   "gender": "male",
                   "id": 106,
@@ -246,27 +239,26 @@
                   "state": "CA",
                   "address": 250
                 },
-                "identity": 106,
-                "joins": null
+                "id": 106
               }
             ]
           }
         },
         {
           "table": "addresses",
-          "value": {
+          "val": {
             "id": 280,
             "address": "400 4th Ave",
             "city": "Portland",
             "state": "OR",
             "zip": 97205
           },
-          "identity": 280,
-          "joins": {
+          "id": 280,
+          "$": {
             "userAddresses": [
               {
                 "table": "users",
-                "value": {
+                "val": {
                   "name": "Delta",
                   "gender": "male",
                   "id": 103,
@@ -275,8 +267,7 @@
                   "state": "CA",
                   "address": 280
                 },
-                "identity": 103,
-                "joins": null
+                "id": 103
               }
             ]
           }
@@ -286,11 +277,10 @@
   },
   {
     "table": "states",
-    "value": {
+    "val": {
       "abbr": "WA",
       "label": "Washington"
     },
-    "identity": "WA",
-    "joins": null
+    "id": "WA"
   }
 ]

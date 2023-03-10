@@ -6,7 +6,7 @@ import {
   QueryJoinDefObj,
   QueryObj,
   SelectorObj,
-  TableItem,
+  TableItem, TableItemJSON,
   TableObj
 } from './types'
 import { TableItemClass } from './TableItemClass'
@@ -180,7 +180,7 @@ export default class Query implements QueryObj {
     return this.value.map(TableItemClass.toJSON);
   }
 
-  private get observable() {
+  public get observable() : Observable<TableItemJSON[]>{
     //@ts-ignore
     return this.base.trans.pipe(...commitPipes(this));
   }

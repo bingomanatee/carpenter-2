@@ -13,11 +13,11 @@ const shouldAllowDeepJoinsOtherDirection = JSON.parse(
 );
 
 const women = (tr: TableItem) => {
-  const user = tr.value as UsersRecord;
+  const user = tr.val as UsersRecord;
   return user.gender === Gender.female
 }
 const oldPeople = (tr: TableItem) => {
-  const user = tr.value as UsersRecord;
+  const user = tr.val as UsersRecord;
   return 'age' in user && Number(user.age) > 20
 }
 
@@ -37,13 +37,13 @@ describe('Queries', () => {
           sel: (tr: TableItem) => {
             const utr = tr as TypedTableItem<UsersRecord, number>
             return ({
-              ...utr.value, fullName: [utr.value.name,
-                utr.value.last].join(' ')
+              ...utr.val, fullName: [utr.val.name,
+                utr.val.last].join(' ')
             })
           }
         });
         const fullNames = query.value.map((tr: TableItem) => {
-          const value = tr.value as Record<string, any>
+          const value = tr.val as Record<string, any>
           return value.fullName;
         });
         expect(fullNames).toEqual([
@@ -199,8 +199,8 @@ describe('Queries', () => {
           table: 'users',
           sel: {
             sort: (t1: TableItem, t2: TableItem) => {
-              const u1 = t1.value as UsersRecord;
-              const u2 = t2.value as UsersRecord;
+              const u1 = t1.val as UsersRecord;
+              const u2 = t2.val as UsersRecord;
 
               if (u1.gender === u2.gender) {
                 return 0;
@@ -211,7 +211,7 @@ describe('Queries', () => {
         });
 
         const users = query.value.map(tr => {
-          const user = tr.value as UsersRecord;
+          const user = tr.val as UsersRecord;
           return { id: user.id, gender: user.gender };
         });
 
@@ -236,8 +236,8 @@ describe('Queries', () => {
           table: 'users',
           sel: [{
             sort: (t1: TableItem, t2: TableItem) => {
-              const u1 = t1.value as UsersRecord;
-              const u2 = t2.value as UsersRecord;
+              const u1 = t1.val as UsersRecord;
+              const u2 = t2.val as UsersRecord;
 
               if (u1.gender === u2.gender) {
                 return 0;
@@ -248,7 +248,7 @@ describe('Queries', () => {
         });
 
         const users = query.value.map(tr => {
-          const user = tr.value as UsersRecord;
+          const user = tr.val as UsersRecord;
           return { id: user.id, gender: user.gender };
         });
 
@@ -268,8 +268,8 @@ describe('Queries', () => {
             { count: 6 },
             {
               sort: (t1: TableItem, t2: TableItem) => {
-                const u1 = t1.value as UsersRecord;
-                const u2 = t2.value as UsersRecord;
+                const u1 = t1.val as UsersRecord;
+                const u2 = t2.val as UsersRecord;
 
                 if (u1.gender === u2.gender) {
                   return 0;
@@ -280,7 +280,7 @@ describe('Queries', () => {
         });
 
         const users = query.value.map(tr => {
-          const user = tr.value as UsersRecord;
+          const user = tr.val as UsersRecord;
           return { id: user.id, gender: user.gender };
         });
 
@@ -301,8 +301,8 @@ describe('Queries', () => {
             { count: 6 },
             {
               sort: (t1: TableItem, t2: TableItem) => {
-                const u1 = t1.value as UsersRecord;
-                const u2 = t2.value as UsersRecord;
+                const u1 = t1.val as UsersRecord;
+                const u2 = t2.val as UsersRecord;
 
                 if (u1.gender === u2.gender) {
                   return 0;
@@ -317,7 +317,7 @@ describe('Queries', () => {
         });
 
         const users = query.value.map(tr => {
-          const user = tr.value as UsersRecord;
+          const user = tr.val as UsersRecord;
           return { id: user.id, gender: user.gender, age: user.age };
         });
 
@@ -345,7 +345,7 @@ describe('Queries', () => {
       expect(values).toEqual(
         [{
           "table": "users",
-          "value": {
+          "val": {
             "name": "Alpha",
             "gender": "male",
             "id": 100,
@@ -354,29 +354,27 @@ describe('Queries', () => {
             "state": "CA",
             "address": 210
           },
-          "identity": 100,
-          "joins": {
+          "id": 100,
+          "$": {
             "userAddresses": [{
               "table": "addresses",
-              "value": {
+              "val": {
                 "id": 210,
                 "address": "1000 First Avenue",
                 "city": "San Francisco",
                 "state": "CA",
                 "zip": 11135
               },
-              "identity": 210,
-              "joins": null
+              "id": 210
             }]
           }
         }, {
           "table": "users",
-          "value": { "name": "Beta", "gender": "male", "id": 101, "last": "Smith", "age": 30, "state": "CA" },
-          "identity": 101,
-          "joins": null
+          "val": { "name": "Beta", "gender": "male", "id": 101, "last": "Smith", "age": 30, "state": "CA" },
+          "id": 101
         }, {
           "table": "users",
-          "value": {
+          "val": {
             "name": "Gamma",
             "gender": "female",
             "id": 102,
@@ -385,24 +383,23 @@ describe('Queries', () => {
             "state": "OR",
             "address": 290
           },
-          "identity": 102,
-          "joins": {
+          "id": 102,
+          "$": {
             "userAddresses": [{
               "table": "addresses",
-              "value": {
+              "val": {
                 "id": 290,
                 "address": "44 Los Angeles Dr",
                 "city": "Simi Valley",
                 "state": "CA",
                 "zip": 93065
               },
-              "identity": 290,
-              "joins": null
+              "id": 290
             }]
           }
         }, {
           "table": "users",
-          "value": {
+          "val": {
             "name": "Delta",
             "gender": "male",
             "id": 103,
@@ -411,13 +408,12 @@ describe('Queries', () => {
             "state": "CA",
             "address": 280
           },
-          "identity": 103,
-          "joins": {
+          "id": 103,
+          "$": {
             "userAddresses": [{
               "table": "addresses",
-              "value": { "id": 280, "address": "400 4th Ave", "city": "Portland", "state": "OR", "zip": 97205 },
-              "identity": 280,
-              "joins": null
+              "val": { "id": 280, "address": "400 4th Ave", "city": "Portland", "state": "OR", "zip": 97205 },
+              "id": 280
             }]
           }
         }]);
@@ -434,110 +430,101 @@ describe('Queries', () => {
       expect(values).toEqual(
         [{
           "table": "states",
-          "value": { "abbr": "CA", "label": "California" },
-          "identity": "CA",
-          "joins": {
+          "val": { "abbr": "CA", "label": "California" },
+          "id": "CA",
+          "$": {
             "addressStates": [{
               "table": "addresses",
-              "value": {
+              "val": {
                 "id": 210,
                 "address": "1000 First Avenue",
                 "city": "San Francisco",
                 "state": "CA",
                 "zip": 11135
               },
-              "identity": 210,
-              "joins": null
+              "id": 210
             }, {
               "table": "addresses",
-              "value": {
+              "val": {
                 "id": 230,
                 "address": "1010 Simi Valley Dr",
                 "city": "Simi Valley",
                 "state": "CA",
                 "zip": 93065
               },
-              "identity": 230,
-              "joins": null
+              "id": 230
             }, {
               "table": "addresses",
-              "value": {
+              "val": {
                 "id": 240,
                 "address": "666 Buffalo Avenue",
                 "city": "San Francisco",
                 "state": "CA",
                 "zip": 11135
               },
-              "identity": 240,
-              "joins": null
+              "id": 240
             }, {
               "table": "addresses",
-              "value": {
+              "val": {
                 "id": 260,
                 "address": "444 Simi Valley Dr",
                 "city": "Simi Valley",
                 "state": "CA",
                 "zip": 93065
               },
-              "identity": 260,
-              "joins": null
+              "id": 260
             }, {
               "table": "addresses",
-              "value": {
+              "val": {
                 "id": 270,
                 "address": "1000 Harrison St",
                 "city": "San Francisco",
                 "state": "CA",
                 "zip": 98403
               },
-              "identity": 270,
-              "joins": null
+              "id": 270
             }, {
               "table": "addresses",
-              "value": {
+              "val": {
                 "id": 290,
                 "address": "44 Los Angeles Dr",
                 "city": "Simi Valley",
                 "state": "CA",
                 "zip": 93065
               },
-              "identity": 290,
-              "joins": null
+              "id": 290
             }]
           }
         }, {
           "table": "states",
-          "value": { "abbr": "OR", "label": "Oregon" },
-          "identity": "OR",
-          "joins": {
+          "val": { "abbr": "OR", "label": "Oregon" },
+          "id": "OR",
+          "$": {
             "addressStates": [{
               "table": "addresses",
-              "value": { "id": 220, "address": "3317 NE 15th", "city": "Portland", "state": "OR", "zip": 97205 },
-              "identity": 220,
-              "joins": null
+              "val": { "id": 220, "address": "3317 NE 15th", "city": "Portland", "state": "OR", "zip": 97205 },
+              "id": 220
             }, {
               "table": "addresses",
-              "value": {
+              "val": {
                 "id": 250,
                 "address": "101 Multnomah Avenue",
                 "city": "Portland",
                 "state": "OR",
                 "zip": 97205
               },
-              "identity": 250,
-              "joins": null
+              "id": 250
             }, {
               "table": "addresses",
-              "value": { "id": 280, "address": "400 4th Ave", "city": "Portland", "state": "OR", "zip": 97205 },
-              "identity": 280,
-              "joins": null
+              "val": { "id": 280, "address": "400 4th Ave", "city": "Portland", "state": "OR", "zip": 97205 },
+              "id": 280
             }]
           }
-        }, { "table": "states", "value": { "abbr": "WA", "label": "Washington" }, "identity": "WA", "joins": null }]
+        }, { "table": "states", "val": { "abbr": "WA", "label": "Washington" }, "id": "WA" }]
       );
     });
 
-    it('should allow deep joins', () => {
+    it('should allow deep $', () => {
       const query = base.query({
         table: 'users',
         joins: [{ joinName: 'userAddresses', joins: [{ joinName: 'addressStates' }] }],
@@ -545,7 +532,7 @@ describe('Queries', () => {
       });
 
       const values = query.toJSON
-      // console.log('deep joins are ', JSON.stringify(values, undefined, 4));
+      // console.log('deep $ are ', JSON.stringify(values, undefined, 4));
       expect(values).toEqual(
         shouldAllowDeepJoins
       );
@@ -594,14 +581,13 @@ describe('Queries', () => {
 
         expect(userWithAddr.toJSON).toEqual([{
             "table": "users",
-            "value": { "name": "Bob", "gender": "male", "id": 1, "address": 10 },
-            "identity": 1,
-            "joins": {
+            "val": { "name": "Bob", "gender": "male", "id": 1, "address": 10 },
+            "id": 1,
+            "$": {
               "userAddresses": [{
                 "table": "addresses",
-                "value": { "id": 10, "address": "1000 11th Ave", "city": "Seattle", "state": "WA", "zip": 10133 },
-                "identity": 10,
-                "joins": null
+                "val": { "id": 10, "address": "1000 11th Ave", "city": "Seattle", "state": "WA", "zip": 10133 },
+                "id": 10
               }]
             }
           }]
@@ -627,14 +613,13 @@ describe('Queries', () => {
 
         expect(studentClasses?.toJSON).toEqual([{
             "table": "students",
-            "value": { "name": "Bob", "studentId": "Qm9i" },
-            "identity": "Qm9i",
-            "joins": {
+            "val": { "name": "Bob", "studentId": "Qm9i" },
+            "id": "Qm9i",
+            "$": {
               "studentsToClasses": [{
                 "table": "classes",
-                "value": { "name": "Physics", "program": "Science", "id": "PHYS101" },
-                "identity": "PHYS101",
-                "joins": null
+                "val": { "name": "Physics", "program": "Science", "id": "PHYS101" },
+                "id": "PHYS101"
               }]
             }
           }]

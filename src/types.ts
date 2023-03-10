@@ -1,6 +1,6 @@
 import { transactionSet, transObj } from '@wonderlandlabs/transact/dist/types'
 import { collectObj, generalObj } from '@wonderlandlabs/collect/lib/types'
-import { MonoTypeOperatorFunction, Observer } from 'rxjs'
+import { MonoTypeOperatorFunction, Observable, Observer } from 'rxjs'
 
 export type scalar = number | string;
 
@@ -53,8 +53,8 @@ export type enumerator = (record: unknown, key: unknown) => void
 export type joinDirection = 'from' | 'to';
 
 /**
- * note - 'data' is a raw value; but when added with add/update,
- * it is processed by processData into the proper type, i.e., a value that
+ * note - 'data' is a raw val; but when added with add/update,
+ * it is processed by processData into the proper type, i.e., a val that
  * can survive testRecord
  */
 export interface TableObj {
@@ -269,17 +269,28 @@ export interface JoinPair {
   to: unknown,  // to records identityFromRecord
 }
 
-export type TableItem = {
-  readonly value: unknown,
-  readonly data: unknown,
-  readonly identity: unknown,
-  readonly exists: boolean,
-  readonly table: TableObj,
-  joins?: Map<string, TableItem[]>,
+export type TableItemBase = {
+  readonly val: unknown,
 }
 
+export type tableItemJSONJoinRecord = Record<string, TableItemJSON[]>
+export type TableItemJSON = {
+  $?: tableItemJSONJoinRecord
+  table: string
+  id: unknown
+} & TableItemBase
+
+export type tableItemJoinMap = Map<string, TableItem[]>;
+export type TableItem = {
+  readonly data: unknown,
+  readonly exists: boolean,
+  readonly table: TableObj,
+  readonly identity: unknown,
+  joins?: tableItemJoinMap | null
+} & TableItemBase
+
 export type TypedTableItem<RecordType, IdentityType> = TableItem & {
-  readonly value: RecordType,
+  readonly val: RecordType,
   readonly identity: IdentityType,
 }
 
@@ -343,7 +354,8 @@ export type QueryDefObj = {
 export type QueryObj = {
   value: TableItem[],
   base: BaseObj,
-  toJSON: Record<string, unknown>[]
+  toJSON: TableItemJSON[],
+  observable: Observable<TableItemJSON[]>
 }
 
 

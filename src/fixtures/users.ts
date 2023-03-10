@@ -305,7 +305,7 @@ export const makeBase = (
         identityFromRecord: 'id',
         onCreate(data): AddressRecord {
           if (!isAddressRecord(data)) {
-            throw new Error('value must be data record');
+            throw new Error('val must be data record');
           }
           return data;
         },

@@ -1,7 +1,7 @@
 [
   {
     "table": "users",
-    "value": {
+    "val": {
       "name": "Alpha",
       "gender": "male",
       "id": 100,
@@ -10,29 +10,28 @@
       "state": "CA",
       "address": 210
     },
-    "identity": 100,
-    "joins": {
+    "id": 100,
+    "$": {
       "userAddresses": [
         {
           "table": "addresses",
-          "value": {
+          "val": {
             "id": 210,
             "address": "1000 First Avenue",
             "city": "San Francisco",
             "state": "CA",
             "zip": 11135
           },
-          "identity": 210,
-          "joins": {
+          "id": 210,
+          "$": {
             "addressStates": [
               {
                 "table": "states",
-                "value": {
+                "val": {
                   "abbr": "CA",
                   "label": "California"
                 },
-                "identity": "CA",
-                "joins": null
+                "id": "CA"
               }
             ]
           }
@@ -42,7 +41,7 @@
   },
   {
     "table": "users",
-    "value": {
+    "val": {
       "name": "Beta",
       "gender": "male",
       "id": 101,
@@ -50,12 +49,11 @@
       "age": 30,
       "state": "CA"
     },
-    "identity": 101,
-    "joins": null
+    "id": 101
   },
   {
     "table": "users",
-    "value": {
+    "val": {
       "name": "Gamma",
       "gender": "female",
       "id": 102,
@@ -64,29 +62,28 @@
       "state": "OR",
       "address": 290
     },
-    "identity": 102,
-    "joins": {
+    "id": 102,
+    "$": {
       "userAddresses": [
         {
           "table": "addresses",
-          "value": {
+          "val": {
             "id": 290,
             "address": "44 Los Angeles Dr",
             "city": "Simi Valley",
             "state": "CA",
             "zip": 93065
           },
-          "identity": 290,
-          "joins": {
+          "id": 290,
+          "$": {
             "addressStates": [
               {
                 "table": "states",
-                "value": {
+                "val": {
                   "abbr": "CA",
                   "label": "California"
                 },
-                "identity": "CA",
-                "joins": null
+                "id": "CA"
               }
             ]
           }
@@ -96,7 +93,7 @@
   },
   {
     "table": "users",
-    "value": {
+    "val": {
       "name": "Delta",
       "gender": "male",
       "id": 103,
@@ -105,29 +102,28 @@
       "state": "CA",
       "address": 280
     },
-    "identity": 103,
-    "joins": {
+    "id": 103,
+    "$": {
       "userAddresses": [
         {
           "table": "addresses",
-          "value": {
+          "val": {
             "id": 280,
             "address": "400 4th Ave",
             "city": "Portland",
             "state": "OR",
             "zip": 97205
           },
-          "identity": 280,
-          "joins": {
+          "id": 280,
+          "$": {
             "addressStates": [
               {
                 "table": "states",
-                "value": {
+                "val": {
                   "abbr": "OR",
                   "label": "Oregon"
                 },
-                "identity": "OR",
-                "joins": null
+                "id": "OR"
               }
             ]
           }

@@ -362,7 +362,7 @@ export default class Join implements JoinObj {
         const { fromId, toId } = self.viaKeys(data);
 
         if (!(isScalar(fromId) && isScalar(toId))) {
-          throw new Error('via/intrinsic joins require scalar identities');
+          throw new Error('via/intrinsic $ require scalar identities');
         }
         return data;
       }

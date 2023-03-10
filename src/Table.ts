@@ -152,7 +152,7 @@ export default class Table implements TableObj {
    * note - the generator must yield either
    *    array pairs [record, identityFromRecord]
    *    object records {$record, $identityFromRecord?}
-   *    records (any other return value taken as a record)
+   *    records (any other return val taken as a record)
    *         --- if a record is generated, the table MUST have an identityFromRecord function
    *
    * that means if you want to return a record that _is_ an array
@@ -307,7 +307,7 @@ export default class Table implements TableObj {
         return joinItem;
       }
     } else if (isJoinTermTableNameBase(term)) {
-      // @TODO: detect self-joins
+      // @TODO: detect self-$
       const { tableName } = term;
 
       return this.$joinFromTableName(tableName);
@@ -331,7 +331,7 @@ export default class Table implements TableObj {
       return matches[0];
     }
     if (matches.length > 1) {
-      throw new Error('multiple joins for ' + tableName + 'from ' + this.name);
+      throw new Error('multiple $ for ' + tableName + 'from ' + this.name);
     }
     return null;
   }
