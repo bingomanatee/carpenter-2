@@ -1,7 +1,5 @@
 import {
-  BaseObj, identityMap, isQueryJoinDefJoinName, isQueryJoinDefTableName, JoinDef,
-  JoinItem,
-  JoinObj,
+  BaseObj, isQueryJoinDefJoinName, isQueryJoinDefTableName, JoinItem,
   QueryDefObj,
   QueryJoinDefObj,
   QueryObj,
@@ -12,7 +10,7 @@ import {
 import { TableItemClass } from './TableItemClass'
 import { collectObj } from '@wonderlandlabs/collect/lib/types'
 import { c } from '@wonderlandlabs/collect'
-import { filter, map, MonoTypeOperatorFunction, Observable, Observer, share, Subscription } from 'rxjs';
+import { filter, map, MonoTypeOperatorFunction, Observable, share } from 'rxjs';
 import { transObj } from '@wonderlandlabs/transact/dist/types'
 import { listenerFactory } from './utils'
 
@@ -89,8 +87,8 @@ export default class Query implements QueryObj {
       let table: TableObj;
 
       if (joinItem.direction === 'from') {
-        table = joinItem.join.toTable
-        ids = joinItem.join.toIdentities(ts.identity)
+        table = joinItem.join.to.table
+        ids = joinItem.join.to.identities(ts.identity)
       } else {
         table = joinItem.join.from.table
         ids = joinItem.join.from.identities(ts.identity)

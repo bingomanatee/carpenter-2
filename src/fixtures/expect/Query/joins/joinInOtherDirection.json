@@ -1,0 +1,133 @@
+[
+  {
+    "t": "states",
+    "val": {
+      "abbr": "CA",
+      "label": "California"
+    },
+    "id": "CA",
+    "$": {
+      "addressStates": [
+        {
+          "t": "addresses",
+          "val": {
+            "id": 210,
+            "address": "1000 First Avenue",
+            "city": "San Francisco",
+            "state": "CA",
+            "zip": 11135
+          },
+          "id": 210
+        },
+        {
+          "t": "addresses",
+          "val": {
+            "id": 230,
+            "address": "1010 Simi Valley Dr",
+            "city": "Simi Valley",
+            "state": "CA",
+            "zip": 93065
+          },
+          "id": 230
+        },
+        {
+          "t": "addresses",
+          "val": {
+            "id": 240,
+            "address": "666 Buffalo Avenue",
+            "city": "San Francisco",
+            "state": "CA",
+            "zip": 11135
+          },
+          "id": 240
+        },
+        {
+          "t": "addresses",
+          "val": {
+            "id": 260,
+            "address": "444 Simi Valley Dr",
+            "city": "Simi Valley",
+            "state": "CA",
+            "zip": 93065
+          },
+          "id": 260
+        },
+        {
+          "t": "addresses",
+          "val": {
+            "id": 270,
+            "address": "1000 Harrison St",
+            "city": "San Francisco",
+            "state": "CA",
+            "zip": 98403
+          },
+          "id": 270
+        },
+        {
+          "t": "addresses",
+          "val": {
+            "id": 290,
+            "address": "44 Los Angeles Dr",
+            "city": "Simi Valley",
+            "state": "CA",
+            "zip": 93065
+          },
+          "id": 290
+        }
+      ]
+    }
+  },
+  {
+    "t": "states",
+    "val": {
+      "abbr": "OR",
+      "label": "Oregon"
+    },
+    "id": "OR",
+    "$": {
+      "addressStates": [
+        {
+          "t": "addresses",
+          "val": {
+            "id": 220,
+            "address": "3317 NE 15th",
+            "city": "Portland",
+            "state": "OR",
+            "zip": 97205
+          },
+          "id": 220
+        },
+        {
+          "t": "addresses",
+          "val": {
+            "id": 250,
+            "address": "101 Multnomah Avenue",
+            "city": "Portland",
+            "state": "OR",
+            "zip": 97205
+          },
+          "id": 250
+        },
+        {
+          "t": "addresses",
+          "val": {
+            "id": 280,
+            "address": "400 4th Ave",
+            "city": "Portland",
+            "state": "OR",
+            "zip": 97205
+          },
+          "id": 280
+        }
+      ]
+    }
+  },
+  {
+    "t": "states",
+    "val": {
+      "abbr": "WA",
+      "label": "Washington"
+    },
+    "id": "WA"
+  }
+]

@@ -5,7 +5,7 @@ import {
   JoinObj,
   QueryDefObj,
   QueryObj,
-  TableObj, isTableConfig, TableConfig, BaseTableConfig
+  TableObj, isTableConfig, TableConfig, BaseTableConfig, isJoin
 } from './types'
 import Table from './Table'
 import { TransactionSet } from '@wonderlandlabs/transact'
@@ -36,6 +36,11 @@ export class Base implements BaseObj {
     this.tables.forEach((table: TableObj) => table.$clearJoins());
   }
 
+  public getJoin(name: string): JoinObj {
+    const join = this.joins.get(name);
+    if (!isJoin(join)) throw new Error('cannot get join ' + name);
+    return join;
+  }
   public readonly joins = new Map<string, JoinObj>()
 
   private _trans?: transactionSet
@@ -75,7 +80,7 @@ export class Base implements BaseObj {
     }
     this.joins.set(join.name, join);
     join.from.table?.addJoin(join);
-    join.toTable?.addJoin(join);
+    join.to.table?.addJoin(join);
   }
 
   query(def: QueryDefObj): QueryObj {

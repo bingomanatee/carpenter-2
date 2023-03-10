@@ -4,13 +4,14 @@ import { TableItemClass } from '../TableItemClass'
 import { makeCollegeBase } from '../fixtures/teachers'
 
 const fs = require('fs');
-const shouldAllowDeepJoins = JSON.parse(
-  fs.readFileSync(__dirname + '/../fixtures/expect/Query/shouldAllowDeepJoins.json').toString()
+const json = (name: string) => JSON.parse(
+  fs.readFileSync(`${__dirname}/../fixtures/expect/Query/${name}.json`).toString()
 );
 
-const shouldAllowDeepJoinsOtherDirection = JSON.parse(
-  fs.readFileSync(__dirname + '/../fixtures/expect/Query/shouldAllowDeepJoinsOtherDirection.json').toString()
-);
+const shouldAllowDeepJoins = json('joins/deepJoins');
+const deepJoinsOtherDirection = json('joins/deepJoinsOtherDirection');
+const joinsRelatedRecords = json('joins/relatedRecords');
+const joinInOtherDirection = json('joins/joinInOtherDirection');
 
 const women = (tr: TableItem) => {
   const user = tr.val as UsersRecord;
@@ -294,7 +295,7 @@ describe('Queries', () => {
           ]
         );
       });
-      it('should limit, sort, and flter records', () => {
+      it('should limit, sort, and filter records', () => {
         const query = base.query({
           table: 'users',
           sel: [
@@ -333,7 +334,7 @@ describe('Queries', () => {
   });
 
   describe('joins', () => {
-    it('should linkVia related records', () => {
+    it('should join related records', () => {
       const query = base.query({
         table: 'users',
         joins: [{ joinName: 'userAddresses' }],
@@ -343,83 +344,11 @@ describe('Queries', () => {
       const values = query.value.map(TableItemClass.toJSON);
 
       expect(values).toEqual(
-        [{
-          "t": "users",
-          "val": {
-            "name": "Alpha",
-            "gender": "male",
-            "id": 100,
-            "last": "Jones",
-            "age": 20,
-            "state": "CA",
-            "address": 210
-          },
-          "id": 100,
-          "$": {
-            "userAddresses": [{
-              "t": "addresses",
-              "val": {
-                "id": 210,
-                "address": "1000 First Avenue",
-                "city": "San Francisco",
-                "state": "CA",
-                "zip": 11135
-              },
-              "id": 210
-            }]
-          }
-        }, {
-          "t": "users",
-          "val": { "name": "Beta", "gender": "male", "id": 101, "last": "Smith", "age": 30, "state": "CA" },
-          "id": 101
-        }, {
-          "t": "users",
-          "val": {
-            "name": "Gamma",
-            "gender": "female",
-            "id": 102,
-            "last": "Jones",
-            "age": 40,
-            "state": "OR",
-            "address": 290
-          },
-          "id": 102,
-          "$": {
-            "userAddresses": [{
-              "t": "addresses",
-              "val": {
-                "id": 290,
-                "address": "44 Los Angeles Dr",
-                "city": "Simi Valley",
-                "state": "CA",
-                "zip": 93065
-              },
-              "id": 290
-            }]
-          }
-        }, {
-          "t": "users",
-          "val": {
-            "name": "Delta",
-            "gender": "male",
-            "id": 103,
-            "last": "Smith",
-            "age": 20,
-            "state": "CA",
-            "address": 280
-          },
-          "id": 103,
-          "$": {
-            "userAddresses": [{
-              "t": "addresses",
-              "val": { "id": 280, "address": "400 4th Ave", "city": "Portland", "state": "OR", "zip": 97205 },
-              "id": 280
-            }]
-          }
-        }]);
+        joinsRelatedRecords
+        );
     });
 
-    it('should linkVia in other direction', () => {
+    it('should join in other direction', () => {
       const query = base.query({
         table: 'states',
         joins: [{ joinName: 'addressStates' }]
@@ -427,104 +356,10 @@ describe('Queries', () => {
 
       const values = query.value.map(TableItemClass.toJSON);
 
-      expect(values).toEqual(
-        [{
-          "t": "states",
-          "val": { "abbr": "CA", "label": "California" },
-          "id": "CA",
-          "$": {
-            "addressStates": [{
-              "t": "addresses",
-              "val": {
-                "id": 210,
-                "address": "1000 First Avenue",
-                "city": "San Francisco",
-                "state": "CA",
-                "zip": 11135
-              },
-              "id": 210
-            }, {
-              "t": "addresses",
-              "val": {
-                "id": 230,
-                "address": "1010 Simi Valley Dr",
-                "city": "Simi Valley",
-                "state": "CA",
-                "zip": 93065
-              },
-              "id": 230
-            }, {
-              "t": "addresses",
-              "val": {
-                "id": 240,
-                "address": "666 Buffalo Avenue",
-                "city": "San Francisco",
-                "state": "CA",
-                "zip": 11135
-              },
-              "id": 240
-            }, {
-              "t": "addresses",
-              "val": {
-                "id": 260,
-                "address": "444 Simi Valley Dr",
-                "city": "Simi Valley",
-                "state": "CA",
-                "zip": 93065
-              },
-              "id": 260
-            }, {
-              "t": "addresses",
-              "val": {
-                "id": 270,
-                "address": "1000 Harrison St",
-                "city": "San Francisco",
-                "state": "CA",
-                "zip": 98403
-              },
-              "id": 270
-            }, {
-              "t": "addresses",
-              "val": {
-                "id": 290,
-                "address": "44 Los Angeles Dr",
-                "city": "Simi Valley",
-                "state": "CA",
-                "zip": 93065
-              },
-              "id": 290
-            }]
-          }
-        }, {
-          "t": "states",
-          "val": { "abbr": "OR", "label": "Oregon" },
-          "id": "OR",
-          "$": {
-            "addressStates": [{
-              "t": "addresses",
-              "val": { "id": 220, "address": "3317 NE 15th", "city": "Portland", "state": "OR", "zip": 97205 },
-              "id": 220
-            }, {
-              "t": "addresses",
-              "val": {
-                "id": 250,
-                "address": "101 Multnomah Avenue",
-                "city": "Portland",
-                "state": "OR",
-                "zip": 97205
-              },
-              "id": 250
-            }, {
-              "t": "addresses",
-              "val": { "id": 280, "address": "400 4th Ave", "city": "Portland", "state": "OR", "zip": 97205 },
-              "id": 280
-            }]
-          }
-        }, { "t": "states", "val": { "abbr": "WA", "label": "Washington" }, "id": "WA" }]
-      );
+      expect(values).toEqual(joinInOtherDirection);
     });
 
-    it('should allow deep $', () => {
+    it('should allow deep joins', () => {
       const query = base.query({
         table: 'users',
         joins: [{ joinName: 'userAddresses', joins: [{ joinName: 'addressStates' }] }],
@@ -532,10 +367,7 @@ describe('Queries', () => {
       });
 
       const values = query.toJSON
-      // console.log('deep $ are ', JSON.stringify(values, undefined, 4));
-      expect(values).toEqual(
-        shouldAllowDeepJoins
-      );
+      expect(values).toEqual(shouldAllowDeepJoins);
     });
 
     it('should deep link in other direction', () => {
@@ -548,9 +380,7 @@ describe('Queries', () => {
           ]
         }]
       });
-      expect(query.toJSON).toEqual(
-        shouldAllowDeepJoinsOtherDirection
-      );
+      expect(query.toJSON).toEqual(deepJoinsOtherDirection);
     });
 
     describe('link', () => {

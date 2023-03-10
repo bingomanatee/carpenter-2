@@ -1,99 +1,25 @@
 import {
   BaseObj,
   dataMap,
-  identityMap,
   isFieldDef,
-  isJoinIdentityDef,
   isScalar,
   JoinConfig,
-  JoinDef,
   joinDirection,
-  JoinFieldDef, JoinManagerObj,
   JoinObj,
   JoinObjType,
-  joinStrategy,
-  TableObj
+  joinStrategy
 } from './types'
 import { c } from '@wonderlandlabs/collect'
+import { JoinManager } from './JoinManager'
+import { addToIndex } from './joinUtils'
 
-function recordsForMidKeys(midKeys: unknown[], reverseIndex: dataMap, table: TableObj) {
-  const map = new Map();
-  midKeys.forEach((midKey) => {
-    if (reverseIndex.has(midKey)) {
-      const endIdentity = reverseIndex.get(midKey);
-      endIdentity.forEach((endId: unknown) => {
-        if (!map.has(endId) && table.has(endId)) {
-          map.set(endId, table.get(endId));
-        }
-      })
-    }
-  });
-
-  return map;
-}
-
-function addToIndex(map: dataMap, fromIndex: unknown, toIndex: unknown, isList?: boolean) {
-  if (isList && Array.isArray(toIndex)) {
-    toIndex.forEach((toItem) => addToIndex(map, fromIndex, toItem));
-    return;
-  }
-
-  if (!map.has(fromIndex)) {
-    map.set(fromIndex, [toIndex]);
-  } else {
-    const IDs = map.get(fromIndex);
-    if (!IDs.includes(toIndex)) {
-      IDs.push(toIndex);
-    }
-  }
-}
-
-function identitiesForMidKeys(midKeys: unknown[], reverseIndex: dataMap): unknown[] {
-  const matchingIdentities = new Set();
-  midKeys.forEach((midKey) => {
-    if (reverseIndex.has(midKey)) {
-      const endIdentity = reverseIndex.get(midKey);
-      endIdentity.forEach((identity: unknown) => matchingIdentities.add(identity));
-    }
-  });
-
-  return Array.from(matchingIdentities.values());
-}
-
-function extractFieldDef(def: JoinFieldDef, record: unknown) {
-  const coll = c(record);
-  if (coll.family === 'container') {
-    try {
-      const fromIdentity = coll.get(def.field);
-      if (fromIdentity !== undefined) {
-        if (Array.isArray(fromIdentity)) {
-          return fromIdentity;
-        } else {
-          return [fromIdentity];
-        }
-      }
-    } catch (_err) {
-      // cannot retrieve
-    }
-  }
-  return [];
-}
-
-function parseConfig(config: string | JoinDef) {
-  if (typeof config === 'string') {
-    return {
-      table: config,
-    }
-  } else {
-    return config;
-  }
-}
 
 // @TODO: put from / to relationships into manager classes
 
 export default class Join implements JoinObj {
-  constructor(private config: JoinConfig, private base: BaseObj) {
-    this.from = new JoinManager(base, this.fromDef, this);
+  constructor( private config: JoinConfig, private base: BaseObj) {
+    this.from = new JoinManager('from', base, this.config.from, this);
+    this.to = new JoinManager('to', base, this.config.to, this);
   }
 
   $type: JoinObjType = 'JoinObj';
@@ -104,99 +30,30 @@ export default class Join implements JoinObj {
       return this.config.name
     }
     if (!this._name) {
-      this._name = [this.fromDef.table, this.toDef.table].sort().join(':');
+      this._name = [this.from.def.table, this.to.def.table].sort().join(':');
     }
     return this._name;
   }
 
-  private _fromDef?: JoinDef
-  private get fromDef(): JoinDef {
-    if (!this._fromDef) {
-      this._fromDef = parseConfig(this.config.from);
-    }
-
-    return this._fromDef
-  }
-
-  private _toDef?: JoinDef
-  private get toDef(): JoinDef {
-    if (!this._toDef) {
-      this._toDef = parseConfig(this.config.to);
-    }
-
-    return this._toDef
-  }
-
   purgeIndexes() {
-    delete this._toIndex;
-    delete this._toIndexReverse;
     this.from.purgeIndexes();
+    this.to.purgeIndexes();
   }
 
   get isVia() {
     return !!this.config.via;
   }
 
-  get toTable(): TableObj {
-    return this.base.table(this.toDef.table) ?? (() => {
-      throw(`cannot find table ${this.toDef.table}`)
-    })()
-  }
-
-  private _toIndex?: dataMap
-  private _toIndexReverse?: dataMap
-  private _toIsIdentity?: boolean
-  private get toIsIdentity() {
-    if (typeof this._toIsIdentity !== 'boolean') {
-      this._toIsIdentity = isJoinIdentityDef(this.toDef);
-    }
-    return this._toIsIdentity
-  }
-
-  get toIndex(): dataMap {
-    if (!this._toIndex) {
-      if (this.isVia) {
-        this.indexVia();
-      } else {
-        this._toIndex = this.toTable.$coll.getMap((record, identity) => {
-          let out: any[] = [];
-          if (this.toIsIdentity) {
-            return [identity]
-          } else if (isFieldDef(this.toDef)) {
-            out = extractFieldDef(this.toDef, record);
-          }
-          return out;
-        });
-      }
-    }
-    return this._toIndex || emptyMap
-  }
-
-  get toIndexReverse(): dataMap {
-    if (!this._toIndexReverse) {
-      const coll = new Map();
-      this.toIndex.forEach((keys, identity) => {
-        keys.forEach((key: unknown) => {
-          addToIndex(coll, key, identity)
-        })
-      });
-
-      this._toIndexReverse = coll
-    }
-
-    return this._toIndexReverse;
-  }
-
   get strategy(): joinStrategy {
     if (this.isVia) {
       return 'identity-via-identity';
     }
-    if (isFieldDef(this.fromDef)) {
-      if (isFieldDef(this.toDef)) {
+    if (isFieldDef(this.from.def)) {
+      if (isFieldDef(this.to.def)) {
         return 'field-field';
       }
       return 'field-identity';
-    } else if (isFieldDef(this.toDef)) {
+    } else if (isFieldDef(this.to.def)) {
       return 'identity-field'
     }
     return 'identity-identity'
@@ -206,8 +63,8 @@ export default class Join implements JoinObj {
            dataItems: unknown[] | dataMap,
            direction: joinDirection,
            isPairs = false) {
-    const table = direction === 'from' ? this.from.table : this.toTable;
-    const config = direction === 'from' ? this.fromDef : this.toDef;
+    const table = direction === 'from' ? this.from.table : this.to.table;
+    const config = direction === 'from' ? this.from.def : this.to.def;
     if (!isFieldDef(config)) {
       throw new Error('linkMany must target field type');
     }
@@ -222,7 +79,7 @@ export default class Join implements JoinObj {
       }
     }
 
-    this.base.trans.do('withBackedUpTables', [this.from.table.name, this.toTable.name],
+    this.base.trans.do('withBackedUpTables', [this.from.table.name, this.to.table.name],
       () => {
         if (isPairs) {
           let source = Array.isArray(dataItems) ? new Map(dataItems) : dataItems;
@@ -239,20 +96,20 @@ export default class Join implements JoinObj {
   }
 
   link(fromIdentity: unknown, toIdentity: unknown) {
-    if (!(this.from.table.has(fromIdentity) && this.toTable.has(toIdentity))) {
+    if (!(this.from.table.has(fromIdentity) && this.to.table.has(toIdentity))) {
       throw new Error(`cannot link ${fromIdentity} and ${toIdentity} -- not in tables`);
     }
 
     switch (this.strategy) {
       case 'field-identity':
-        if (isFieldDef(this.fromDef)) {
-          this.from.table.setField(fromIdentity, this.fromDef.field, toIdentity);
+        if (isFieldDef(this.from.def)) {
+          this.from.table.setField(fromIdentity, this.from.def.field, toIdentity);
         }
         break
 
       case 'identity-field':
-        if (isFieldDef(this.toDef)) {
-          this.toTable.setField(toIdentity, this.toDef.field, fromIdentity);
+        if (isFieldDef(this.to.def)) {
+          this.to.table.setField(toIdentity, this.to.def.field, fromIdentity);
         }
         break;
 
@@ -267,10 +124,10 @@ export default class Join implements JoinObj {
         break;
 
       case 'field-field':
-        if (isFieldDef(this.fromDef) && isFieldDef(this.toDef)) {
+        if (isFieldDef(this.from.def) && isFieldDef(this.to.def)) {
           const c1 = c(this.from.table.get(fromIdentity));
-          const c2 = c(this.toTable.get(toIdentity));
-          if (c1.get(this.fromDef.field) !== c2.get(this.toDef.field)) {
+          const c2 = c(this.to.table.get(toIdentity));
+          if (c1.get(this.from.def.field) !== c2.get(this.to.def.field)) {
             throw new Error('cannot link field-field relationships');
           }
         }
@@ -286,7 +143,7 @@ export default class Join implements JoinObj {
   }
 
   viaKeys(data: unknown) {
-    const toTableName = this.toTable.name;
+    const toTableName = this.to.table.name;
     const fromTableName = this.from.table.name;
     const coll = c(data);
     const fromId = coll.get(fromTableName);
@@ -302,7 +159,7 @@ export default class Join implements JoinObj {
         return `${fromId}_$via$_${toId}`
       },
       onCreate(data: unknown) {
-        if (!(data && typeof data === 'object' && self.from.table.name in data && self.toTable.name in data)) {
+        if (!(data && typeof data === 'object' && self.from.table.name in data && self.to.table.name in data)) {
           throw new Error(self.viaTableName + ' missing t fields');
         }
         const { fromId, toId } = self.viaKeys(data);
@@ -332,159 +189,31 @@ export default class Join implements JoinObj {
 
     const viaIdentity = `${fromIdentity}_$via$_${toIdentity}`;
     if (!this.viaTable?.has(viaIdentity)) {
-      const toTableName = this.toTable.name;
+      const toTableName = this.to.table.name;
       const fromTableName = this.from.table.name;
       this.viaTable?.$set(viaIdentity, { [fromTableName]: fromIdentity, [toTableName]: toIdentity })
     }
   }
 
-  toRecordsMap(fromIdentities: unknown): dataMap {
-    return this.from.identities(fromIdentities).reduce((map: dataMap, identity) => {
-      map.set(identity, this.toTable.get(identity));
-      return map;
-    }, new Map()) as dataMap;
-  }
-
-  toIdentities(fromIdentity: unknown): unknown[] {
-    if (!this.from.index.has(fromIdentity)) {
-      return [];
-    }
-    if (this.toIsIdentity || this.isVia) {
-      return this.from.index.get(fromIdentity)
-    }
-    return identitiesForMidKeys(this.from.index.get(fromIdentity), this.toIndexReverse);
-  }
-
-  toRecordsArray(fromIdentity: unknown): unknown[] {
-    return this.toIdentities(fromIdentity).map((identity: unknown) => this.toTable.get(identity));
-  }
-
-  fromRecordsMap(identity: unknown): dataMap {
-    let midKeys: unknown[];
-    if (isJoinIdentityDef(this.toDef)) {
-      if (isJoinIdentityDef(this.fromDef)) {
-        if (this.from.table.has(identity)) {
-          return new Map([[
-            identity, this.from.table.get(identity)
-          ]]);
-        }
-      }
-      midKeys = [identity]
-      // coerce the reversed map of from into records from the "to" t
-    } else {
-      midKeys = this.toIndex.get(identity);
-    }
-
-    return midKeys.length ? recordsForMidKeys(midKeys, this.from.indexReverse, this.from.table) : emptyMap
-  }
-
   public indexVia() {
-    this.from.index = new Map();
-    this._toIndex = new Map();
+    const fromMap = new Map();
+    const toMap = new Map();
     const fromKey = this.from.table.name;
-    const toKey = this.toTable.name;
+    const toKey = this.to.table.name;
     if (this.viaTable) {
       for (const [_id, keys] of this.viaTable.$coll.iter) {
         const viaItem = keys as Record<string, unknown>;
         const { [fromKey]: fromIndex, [toKey]: toIndex } = viaItem;
 
-        addToIndex(this.from.index, fromIndex, toIndex);
-        addToIndex(this._toIndex, toIndex, fromIndex);
+        addToIndex(fromMap, fromIndex, toIndex);
+        addToIndex(toMap, toIndex, fromIndex);
       }
     }
+    this.from.index = fromMap;
+    this.to.index = toMap;
   }
 
   from: JoinManager
+  to: JoinManager
 }
 
-class JoinManager implements JoinManagerObj {
-  constructor(private base: BaseObj, public fromDef: JoinDef, private join: JoinObj) {}
-
-  purgeIndexes() {
-    delete this._index;
-    delete this._indexReverse;
-  }
-  private _index?: dataMap
-  set index(map: dataMap) {
-    this._index = map;
-  }
-
-  private _table?: TableObj
-  get table(): TableObj {
-     if (!this._table) {
-       this._table =  this.base.table(this.fromDef.table) ?? (() => {
-         throw(`cannot find table ${this.fromDef.table}`)
-       })()
-     }
-     return this._table
-  }
-
-  get index(): dataMap {
-    if (!this._index) {
-      if (this.join.isVia) {
-        this.join.indexVia();
-      } else {
-        this._index = this.table.$coll.getMap((record, identity) => {
-          let out: any[] = [];
-          if (this.join.from.isIdentity) {
-            return [identity]
-          } else if (isFieldDef(this.fromDef)) {
-            out = extractFieldDef(this.fromDef, record);
-          } // else what?
-          return out;
-        });
-      }
-    }
-    return this._index || emptyMap
-  }
-
-  /**
-   * fromIndex is a map of the record identityFromRecord to the exposed key
-   * that matches an exposed key in toIndex.
-   */
-  _indexReverse?: dataMap
-
-  get indexReverse(): dataMap {
-    if (!this._indexReverse) {
-      const coll = new Map();
-      this.index.forEach((keys, identity) => {
-        keys.forEach((key: unknown) => {
-          addToIndex(coll, key, identity);
-        })
-      });
-
-      this._indexReverse = coll
-    }
-
-    return this._indexReverse;
-  }
-
-  _isIdentity?: boolean
-  public get isIdentity() {
-    if (typeof this._isIdentity !== 'boolean') {
-      this._isIdentity = isJoinIdentityDef(this.fromDef);
-    }
-    return this._isIdentity
-  }
-
-
-  identities(toIdentity: unknown): unknown[] {
-
-    if (!this.join.toIndex.has(toIdentity)) {
-      // console.log('cannot find ', toIdentity, 'in ', this.toTable.name);
-      return [];
-    }
-
-    const midIdentities = this.join.toIndex.get(toIdentity)
-    if (this.isIdentity || this.join.isVia) {
-      return midIdentities;
-    }
-    return identitiesForMidKeys(midIdentities, this.indexReverse);
-  }
-
-  records(toIdentity: unknown): unknown[] {
-    return this.identities(toIdentity).map((identity: unknown) => this.table.get(identity));
-  }
-}
-
-const emptyMap = new Map()

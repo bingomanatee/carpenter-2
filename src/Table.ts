@@ -111,7 +111,7 @@ export default class Table implements TableObj {
   addJoin(join: JoinObj) {
     if (join.from.table.name === this.name) {
       this.joins.set(join.name, { join, direction: 'from' })
-    } else if (join.toTable.name === this.name) {
+    } else if (join.to.table.name === this.name) {
       this.joins.set(join.name, { join, direction: 'to' })
     }
   }
@@ -320,10 +320,10 @@ export default class Table implements TableObj {
     let matches = Array.from(this.joins.values()).filter((joinItem: JoinItem) => {
       return (
         (joinItem.join.from.table.name === this.name
-          || joinItem.join.toTable.name === tableName)
+          || joinItem.join.to.table.name === tableName)
         ||
         (joinItem.join.from.table.name === tableName
-          || joinItem.join.toTable.name === this.name)
+          || joinItem.join.to.table.name === this.name)
       );
     });
 

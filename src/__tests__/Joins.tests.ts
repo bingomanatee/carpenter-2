@@ -1,4 +1,3 @@
-import { isJoin } from '../types'
 import {
   makeBase,
   addressUsers, westCoast, addresses, AddressRecord, UsersRecord, StateRecord
@@ -8,28 +7,22 @@ import { makeCollegeBase } from '../fixtures/teachers'
 describe('Table', () => {
   describe('joins', () => {
     const base = makeBase(addressUsers, westCoast, addresses);
-    const userAddresses = base.joins.get('userAddresses');
-    const addressStates = base.joins.get('addressStates');
-
-    if (!isJoin(userAddresses)) {
-      throw new Error('cannot get address linkVia');
-    }
-    if (!isJoin(addressStates)) {
-      throw new Error('cannot get states linkVia');
-    }
+    let userAddresses = base.getJoin('userAddresses'); // from users to addresses
+    const addressStates = base.getJoin('addressStates'); // from states to addresses
 
     describe('toRecordsForArray', () => {
       const [bob] = addressUsers;
 
       it('can get bob\'s address', () => {
-        const addresses = userAddresses.toRecordsArray(bob.id) as AddressRecord[];
+        console.log('user index:,', userAddresses.to.index);
+        const addresses = userAddresses.to.records(bob.id) as AddressRecord[];
         const [bobAddress, next] = addresses;
         expect(bobAddress.address).toBe('1000 First Avenue');
         expect(next).toBeUndefined();
       });
 
       it('can get addresses for state', () => {
-        const [address1, address2, next] = addressStates.toRecordsArray('CA') as AddressRecord[];
+        const [address1, address2, next] = addressStates.to.records('CA') as AddressRecord[];
         expect(new Set([address1.city, address2.city])).toEqual(
           new Set(['San Francisco', 'Simi Valley'])
         );
@@ -66,10 +59,10 @@ describe('Table', () => {
 
         base.table('students')?.join(bobId, {
           identity: physId,
-          tableName : 'classes'
+          tableName: 'classes'
         });
 
-        const [[_joinID, join], after] = base.table('studentClasses')?.$records|| []
+        const [[_joinID, join], after] = base.table('studentClasses')?.$records || []
         expect(join).toEqual({ students: 'Qm9i', classes: 'PHYS101' });
         expect(after).toBeUndefined()
       });

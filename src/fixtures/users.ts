@@ -273,6 +273,7 @@ export const addresses: AddressRecord[] = [
 
 export type StateTable = TypedTableObj<string, StateRecord>;
 export type UserTable = TypedTableObj<number, UsersRecord>
+
 export const makeBase = (
   usersRecords: UsersRecord[] = [],
   states: StateRecord[] = [],
