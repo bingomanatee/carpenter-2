@@ -235,10 +235,14 @@ export type joinsMap = Map<string, TableItem[]>
 export type identityMap = Map<unknown, unknown[]>
 
 export type JoinObjType = 'JoinObj';
-
+export type JoinManagerObj = {
+  index: dataMap,
+  fromDef: JoinDef,
+  table: TableObj,
+  purgeIndexes(): void,
+}
 export interface JoinObj {
   name: string
-  fromTable: TableObj,
   toTable: TableObj,
   $type: JoinObjType,
   isVia: boolean,
@@ -257,6 +261,7 @@ export interface JoinObj {
   linkMany(fromIdentity: unknown, dataItems: unknown[] | dataMap,
            direction: joinDirection,
            isPairs?: boolean): void
+  from: JoinManagerObj,
 }
 
 export function isJoin(arg: unknown): arg is JoinObj {

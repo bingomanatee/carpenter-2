@@ -8,7 +8,7 @@ import {
   JoinConfig,
   JoinDef,
   joinDirection,
-  JoinFieldDef,
+  JoinFieldDef, JoinManagerObj,
   JoinObj,
   JoinObjType,
   joinStrategy,
@@ -93,7 +93,7 @@ function parseConfig(config: string | JoinDef) {
 
 export default class Join implements JoinObj {
   constructor(private config: JoinConfig, private base: BaseObj) {
-    this.from = new JoinManager(base, this.fromDef, this.fromTable, this);
+    this.from = new JoinManager(base, this.fromDef, this);
   }
 
   $type: JoinObjType = 'JoinObj';
@@ -136,12 +136,6 @@ export default class Join implements JoinObj {
 
   get isVia() {
     return !!this.config.via;
-  }
-
-  get fromTable(): TableObj {
-    return this.base.table(this.fromDef.table) ?? (() => {
-      throw(`cannot find table ${this.fromDef.table}`)
-    })()
   }
 
   get toTable(): TableObj {
@@ -241,7 +235,7 @@ export default class Join implements JoinObj {
            dataItems: unknown[] | dataMap,
            direction: joinDirection,
            isPairs = false) {
-    const table = direction === 'from' ? this.fromTable : this.toTable;
+    const table = direction === 'from' ? this.from.table : this.toTable;
     const config = direction === 'from' ? this.fromDef : this.toDef;
     if (!isFieldDef(config)) {
       throw new Error('linkMany must target field type');
@@ -257,7 +251,7 @@ export default class Join implements JoinObj {
       }
     }
 
-    this.base.trans.do('withBackedUpTables', [this.fromTable.name, this.toTable.name],
+    this.base.trans.do('withBackedUpTables', [this.from.table.name, this.toTable.name],
       () => {
         if (isPairs) {
           let source = Array.isArray(dataItems) ? new Map(dataItems) : dataItems;
@@ -274,14 +268,14 @@ export default class Join implements JoinObj {
   }
 
   link(fromIdentity: unknown, toIdentity: unknown) {
-    if (!(this.fromTable.has(fromIdentity) && this.toTable.has(toIdentity))) {
+    if (!(this.from.table.has(fromIdentity) && this.toTable.has(toIdentity))) {
       throw new Error(`cannot link ${fromIdentity} and ${toIdentity} -- not in tables`);
     }
 
     switch (this.strategy) {
       case 'field-identity':
         if (isFieldDef(this.fromDef)) {
-          this.fromTable.setField(fromIdentity, this.fromDef.field, toIdentity);
+          this.from.table.setField(fromIdentity, this.fromDef.field, toIdentity);
         }
         break
 
@@ -303,7 +297,7 @@ export default class Join implements JoinObj {
 
       case 'field-field':
         if (isFieldDef(this.fromDef) && isFieldDef(this.toDef)) {
-          const c1 = c(this.fromTable.get(fromIdentity));
+          const c1 = c(this.from.table.get(fromIdentity));
           const c2 = c(this.toTable.get(toIdentity));
           if (c1.get(this.fromDef.field) !== c2.get(this.toDef.field)) {
             throw new Error('cannot link field-field relationships');
@@ -322,7 +316,7 @@ export default class Join implements JoinObj {
 
   viaKeys(data: unknown) {
     const toTableName = this.toTable.name;
-    const fromTableName = this.fromTable.name;
+    const fromTableName = this.from.table.name;
     const coll = c(data);
     const fromId = coll.get(fromTableName);
     const toId = coll.get(toTableName);
@@ -337,7 +331,7 @@ export default class Join implements JoinObj {
         return `${fromId}_$via$_${toId}`
       },
       onCreate(data: unknown) {
-        if (!(data && typeof data === 'object' && self.fromTable.name in data && self.toTable.name in data)) {
+        if (!(data && typeof data === 'object' && self.from.table.name in data && self.toTable.name in data)) {
           throw new Error(self.viaTableName + ' missing t fields');
         }
         const { fromId, toId } = self.viaKeys(data);
@@ -368,7 +362,7 @@ export default class Join implements JoinObj {
     const viaIdentity = `${fromIdentity}_$via$_${toIdentity}`;
     if (!this.viaTable?.has(viaIdentity)) {
       const toTableName = this.toTable.name;
-      const fromTableName = this.fromTable.name;
+      const fromTableName = this.from.table.name;
       this.viaTable?.$set(viaIdentity, { [fromTableName]: fromIdentity, [toTableName]: toIdentity })
     }
   }
@@ -437,9 +431,9 @@ export default class Join implements JoinObj {
     let midKeys: unknown[];
     if (isJoinIdentityDef(this.toDef)) {
       if (isJoinIdentityDef(this.fromDef)) {
-        if (this.fromTable.has(identity)) {
+        if (this.from.table.has(identity)) {
           return new Map([[
-            identity, this.fromTable.get(identity)
+            identity, this.from.table.get(identity)
           ]]);
         }
       }
@@ -449,17 +443,17 @@ export default class Join implements JoinObj {
       midKeys = this.toIndex.get(identity);
     }
 
-    return midKeys.length ? recordsForMidKeys(midKeys, this.fromIndexReverse, this.fromTable) : emptyMap
+    return midKeys.length ? recordsForMidKeys(midKeys, this.fromIndexReverse, this.from.table) : emptyMap
   }
 
   fromRecordsArray(toIdentity: unknown): unknown[] {
-    return this.fromIdentities(toIdentity).map((identity: unknown) => this.fromTable.get(identity));
+    return this.fromIdentities(toIdentity).map((identity: unknown) => this.from.table.get(identity));
   }
 
   public indexVia() {
     this.from.index = new Map();
     this._toIndex = new Map();
-    const fromKey = this.fromTable.name;
+    const fromKey = this.from.table.name;
     const toKey = this.toTable.name;
     if (this.viaTable) {
       for (const [_id, keys] of this.viaTable.$coll.iter) {
@@ -475,15 +469,8 @@ export default class Join implements JoinObj {
   from: JoinManager
 }
 
-type JoinManagerObj = {
-  index: dataMap,
-  fromDef: JoinDef,
-  fromTable: TableObj,
-  purgeIndexes(): void,
-}
-
 class JoinManager implements JoinManagerObj {
-  constructor(private base: BaseObj, public fromDef: JoinDef, public fromTable: TableObj, private join: JoinObj) {}
+  constructor(private base: BaseObj, public fromDef: JoinDef, private join: JoinObj) {}
 
   purgeIndexes() {
     delete this._index;
@@ -492,12 +479,23 @@ class JoinManager implements JoinManagerObj {
   set index(map: dataMap) {
     this._index = map;
   }
+
+  private _table?: TableObj
+  get table(): TableObj {
+     if (!this._table) {
+       this._table =  this.base.table(this.fromDef.table) ?? (() => {
+         throw(`cannot find table ${this.fromDef.table}`)
+       })()
+     }
+     return this._table
+  }
+
   get index(): dataMap {
     if (!this._index) {
       if (this.join.isVia) {
         this.join.indexVia();
       } else {
-        this._index = this.fromTable.$coll.getMap((record, identity) => {
+        this._index = this.table.$coll.getMap((record, identity) => {
           let out: any[] = [];
           if (this.join.fromIsIdentity) {
             return [identity]

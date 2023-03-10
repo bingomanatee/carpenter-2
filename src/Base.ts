@@ -74,7 +74,7 @@ export class Base implements BaseObj {
       throw new Error(`cannot redefine join ${join.name}`)
     }
     this.joins.set(join.name, join);
-    join.fromTable?.addJoin(join);
+    join.from.table?.addJoin(join);
     join.toTable?.addJoin(join);
   }
 

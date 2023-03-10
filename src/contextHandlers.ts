@@ -235,7 +235,7 @@ export const contextHandlers = ((base: BaseObj) => {
           throw Object.assign(new Error('cannot linkVia with term'), { term, table, identity });
         }
 
-        remoteTable = joinItem.direction === 'to' ? joinItem.join.fromTable : joinItem.join.toTable
+        remoteTable = joinItem.direction === 'to' ? joinItem.join.from.table : joinItem.join.toTable
 
         let remoteIdentity: unknown = undefined;
 
