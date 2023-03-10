@@ -44,14 +44,14 @@ describe('Table', () => {
           throw new Error('no Bob');
         }
 
-        const users = userAddresses?.fromRecordsArray(10) as UsersRecord[];
+        const users = userAddresses?.from.records(10) as UsersRecord[];
         const [bob, next] = users;
         expect(bob.name).toBe('Bob');
         expect(next).toBeUndefined();
       });
 
       it('can get state for address id', () => {
-        const [state, next] = addressStates.fromRecordsArray(10) as StateRecord[];
+        const [state, next] = addressStates.from.records(10) as StateRecord[];
         expect(state.label).toBe('California');
         expect(next).toBeUndefined();
       });

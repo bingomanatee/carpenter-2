@@ -129,7 +129,6 @@ export default class Join implements JoinObj {
 
   purgeIndexes() {
     delete this._toIndex;
-    delete this._fromIndexReverse;
     delete this._toIndexReverse;
     this.from.purgeIndexes();
   }
@@ -142,27 +141,6 @@ export default class Join implements JoinObj {
     return this.base.table(this.toDef.table) ?? (() => {
       throw(`cannot find table ${this.toDef.table}`)
     })()
-  }
-
-  /**
-   * fromIndex is a map of the record identityFromRecord to the exposed key
-   * that matches an exposed key in toIndex.
-   */
-  _fromIndexReverse?: dataMap
-
-  get fromIndexReverse(): dataMap {
-    if (!this._fromIndexReverse) {
-      const coll = new Map();
-      this.from.index.forEach((keys, identity) => {
-        keys.forEach((key: unknown) => {
-          addToIndex(coll, key, identity);
-        })
-      });
-
-      this._fromIndexReverse = coll
-    }
-
-    return this._fromIndexReverse;
   }
 
   private _toIndex?: dataMap
@@ -367,19 +345,6 @@ export default class Join implements JoinObj {
     }, new Map()) as dataMap;
   }
 
-  fromIdentitiesMap(toIdentities: unknown[]): identityMap {
-    const out = new Map();
-
-    toIdentities.forEach((id) => {
-      const identities = this.from.identities(id);
-      if (identities.length) {
-        out.set(id, identities)
-      }
-    });
-
-    return out;
-  }
-
   toIdentities(fromIdentity: unknown): unknown[] {
     if (!this.from.index.has(fromIdentity)) {
       return [];
@@ -388,19 +353,6 @@ export default class Join implements JoinObj {
       return this.from.index.get(fromIdentity)
     }
     return identitiesForMidKeys(this.from.index.get(fromIdentity), this.toIndexReverse);
-  }
-
-  toIdentitiesMap(fromIdentities: unknown[]): identityMap {
-    const out = new Map();
-
-    fromIdentities.forEach((fromIdentity) => {
-      const toIds = this.toIdentities(fromIdentity);
-      if (toIds.length) {
-        out.set(fromIdentity, toIds)
-      }
-    });
-
-    return out;
   }
 
   toRecordsArray(fromIdentity: unknown): unknown[] {
@@ -423,11 +375,7 @@ export default class Join implements JoinObj {
       midKeys = this.toIndex.get(identity);
     }
 
-    return midKeys.length ? recordsForMidKeys(midKeys, this.fromIndexReverse, this.from.table) : emptyMap
-  }
-
-  fromRecordsArray(toIdentity: unknown): unknown[] {
-    return this.from.identities(toIdentity).map((identity: unknown) => this.from.table.get(identity));
+    return midKeys.length ? recordsForMidKeys(midKeys, this.from.indexReverse, this.from.table) : emptyMap
   }
 
   public indexVia() {
@@ -454,6 +402,7 @@ class JoinManager implements JoinManagerObj {
 
   purgeIndexes() {
     delete this._index;
+    delete this._indexReverse;
   }
   private _index?: dataMap
   set index(map: dataMap) {
@@ -489,6 +438,27 @@ class JoinManager implements JoinManagerObj {
     return this._index || emptyMap
   }
 
+  /**
+   * fromIndex is a map of the record identityFromRecord to the exposed key
+   * that matches an exposed key in toIndex.
+   */
+  _indexReverse?: dataMap
+
+  get indexReverse(): dataMap {
+    if (!this._indexReverse) {
+      const coll = new Map();
+      this.index.forEach((keys, identity) => {
+        keys.forEach((key: unknown) => {
+          addToIndex(coll, key, identity);
+        })
+      });
+
+      this._indexReverse = coll
+    }
+
+    return this._indexReverse;
+  }
+
   _isIdentity?: boolean
   public get isIdentity() {
     if (typeof this._isIdentity !== 'boolean') {
@@ -505,10 +475,15 @@ class JoinManager implements JoinManagerObj {
       return [];
     }
 
+    const midIdentities = this.join.toIndex.get(toIdentity)
     if (this.isIdentity || this.join.isVia) {
-      return this.join.toIndex.get(toIdentity)
+      return midIdentities;
     }
-    return identitiesForMidKeys(this.join.toIndex.get(toIdentity), this.join.fromIndexReverse);
+    return identitiesForMidKeys(midIdentities, this.indexReverse);
+  }
+
+  records(toIdentity: unknown): unknown[] {
+    return this.identities(toIdentity).map((identity: unknown) => this.table.get(identity));
   }
 }
 

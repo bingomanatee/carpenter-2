@@ -237,10 +237,12 @@ export type identityMap = Map<unknown, unknown[]>
 export type JoinObjType = 'JoinObj';
 export type JoinManagerObj = {
   index: dataMap,
+  indexReverse: dataMap,
   fromDef: JoinDef,
   table: TableObj,
   isIdentity: boolean
   purgeIndexes(): void,
+  records(identity: unknown): unknown[],
   identities(identity: unknown) : unknown[]
 }
 export interface JoinObj {
@@ -250,15 +252,11 @@ export interface JoinObj {
   isVia: boolean,
   indexVia(): void,
   toIndex: dataMap,
-  fromIndexReverse: dataMap,
   toRecordsMap(fromIdentity: unknown): dataMap,
   toRecordsArray(fromIdentity: unknown): unknown[],
   fromRecordsMap(toIdentity: unknown): dataMap,
-  fromRecordsArray(fromIdentity: unknown): unknown[],
   purgeIndexes(): void,
   toIdentities(identity: unknown): unknown[],
-  fromIdentitiesMap(identities: unknown[]): identityMap,
-  toIdentitiesMap(identities: unknown[]): identityMap,
   link(id1: unknown, id2: unknown): void,
   linkMany(fromIdentity: unknown, dataItems: unknown[] | dataMap,
            direction: joinDirection,
