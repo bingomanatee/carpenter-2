@@ -4,14 +4,24 @@ import {
   creatorFn,
   dataMap,
   enumerator,
-  identityConfigFn, isJoinTermJoinNameBase, isJoinTermTableNameBase, joinDirection, JoinItem, JoinObj, JoinTerm,
-  mutatorFn, QueryJoinDefObj, queryJoinDefObjSelector,
+  identityConfigFn,
+  isJoinTermJoinNameBase,
+  isJoinTermTableNameBase,
+  JoinItem,
+  JoinObj,
+  JoinTerm,
+  mutatorFn,
+  QueryJoinDefObj,
+  queryJoinDefObjSelector,
   recordGenerator,
   recordTestFn,
-  recordTestValue, SelectorObj,
-  StringKeyRecord, TableConfig,
-  TableItem, tableItemFilter,
-  TableObj, TableQueryDefObj,
+  recordTestValue,
+  SelectorObj,
+  StringKeyRecord,
+  TableConfig,
+  TableItem,
+  tableItemFilter,
+  TableObj,
   tableTestFn
 } from './types'
 import { c } from '@wonderlandlabs/collect'
@@ -136,6 +146,10 @@ export default class Table implements TableObj {
     this.trans.do('join', this, identity, joinTerm);
   }
 
+  public detach(identity: unknown, otherIdentities: unknown) {
+    this.trans.do('detach', this, identity, otherIdentities);
+  }
+
   public delete(identity: unknown) {
     this.trans.do('delete', identity, this);
   }
@@ -255,7 +269,7 @@ export default class Table implements TableObj {
 
   queryFor(identity: unknown, queryDef: QueryJoinDefObj) {
     const filter: tableItemFilter = (tableItem: TableItem) => tableItem.identity === identity
-    const filterSelector: SelectorObj = {filter}
+    const filterSelector: SelectorObj = { filter }
     const { sel: originalSel } = queryDef;
     let sel: queryJoinDefObjSelector = filterSelector;
     if (originalSel) {

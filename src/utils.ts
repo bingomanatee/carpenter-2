@@ -1,6 +1,4 @@
-import { distinctUntilChanged, filter, map, share } from 'rxjs';
-import { transObj } from '@wonderlandlabs/transact/dist/types';
-import { listenerFn, listenerObj, listenerType, mutators, pojo, valuable, voidFn } from './types';
+import { listenerFn, listenerObj, listenerType, pojo, voidFn } from './types';
 import { c } from '@wonderlandlabs/collect';
 
 /**
@@ -22,11 +20,6 @@ export const safeFn = (fn: any, onError = 'error') => {
 };
 
 // ----------- RXJS utilities
-
-export const commitPipes = (target: valuable): mutators =>
-  target.fast
-    ? [filter((set: Set<transObj>) => set.size === 0), map(() => target.value), share()]
-    : [filter((set: Set<transObj>) => set.size === 0), map(() => target.value), distinctUntilChanged(), share()];
 
 export function noopListener() {}
 
