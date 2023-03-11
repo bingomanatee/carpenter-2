@@ -36,7 +36,7 @@ export type TableConfig = {
 
 /**
  * note - 'data' is a raw val; but when added with add/update,
- * it is processed by processData into the proper type, i.e., a val that
+ * it is processed by dataToRecord into the proper type, i.e., a val that
  * can survive testRecord
  */
 export interface TableObj {
@@ -51,7 +51,7 @@ export interface TableObj {
   readonly $coll: collectObj
   $testRecord: tableRecordTestFn
   has(identity: unknown): boolean
-  processData(data: unknown, identity?: unknown): unknown
+  dataToRecord(data: unknown, identity?: unknown): unknown
   add(data: unknown, identity?: unknown): void
   update(identity: unknown, data: unknown): void
   updateMany(records: unknown[] | dataMap): dataMap

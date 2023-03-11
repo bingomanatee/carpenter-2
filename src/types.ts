@@ -42,7 +42,7 @@ export type BaseConfig = {
 export interface TypedTableObj<IdentityType, RecordType> extends TableObj {
   identityFor: ((data: unknown) => IdentityType)
   has(identity: IdentityType): boolean
-  processData(data: unknown, identity?: unknown): RecordType
+  dataToRecord(data: unknown, identity?: unknown): RecordType
   get(identity: IdentityType): RecordType | undefined
   $set(identity: IdentityType, record: RecordType): void
   add(data: unknown, identity?: IdentityType): void

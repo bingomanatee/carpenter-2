@@ -141,7 +141,8 @@ export interface JoinObj {
   purgeIndexes(): void,
   link(id1: unknown, id2: unknown): void,
   detach(ref1: TableItemJSON, ref2: TableItemJSON, second?: boolean): void;
-  linkMany(fromIdentity: unknown, dataItems: unknown[] | dataMap,
+  linkMany(fromIdentity: unknown,
+           toIdentities: unknown[],
            direction: joinDirection,
            isPairs?: boolean): void
   from: JoinManagerObj,

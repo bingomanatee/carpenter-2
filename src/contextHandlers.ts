@@ -76,7 +76,7 @@ export const contextHandlers = ((base: BaseObj) => {
         (trans: transObj, table: TableObj, data: unknown, identity?: unknown, replace?: boolean) => {
           let record: unknown;
           if (identity === undefined) {
-            record = table.processData(data);
+            record = table.dataToRecord(data);
             identity = table.identityFor(record);
             if (identity === undefined) {
               throw Object.assign(new Error('add: cannot add unidentified record to t ' + table.name),
@@ -95,7 +95,7 @@ export const contextHandlers = ((base: BaseObj) => {
             })
           }
           if (record === undefined) {
-            record = table.processData(data, identity);
+            record = table.dataToRecord(data, identity);
           }
           trans.meta.set('recordExists', table.has(identity));
           backupRecord(trans, table, identity)
@@ -129,7 +129,7 @@ export const contextHandlers = ((base: BaseObj) => {
                 table: table.name
               })
           }
-          const record = table.processData(data, identity);
+          const record = table.dataToRecord(data, identity);
           trans.meta.set('recordExists', table.has(identity));
           backupRecord(trans, table, identity)
           trans.transactionSet.do('validateRecord', record, identity, table, trans.meta.get('previous'));
@@ -143,21 +143,21 @@ export const contextHandlers = ((base: BaseObj) => {
       ],
       updateMany: [
         (trans: transObj, data: unknown[] | dataMap, table: TableObj, replace = false) => {
-          let recordMap: dataMap
+          let recordMap: dataMap // identity - data
           if (Array.isArray(data)) {
             recordMap = new Map();
             data.forEach(data => {
-              const record = table.processData(data);
+              const record = table.dataToRecord(data);
               const identity = table.identityFor(record);
               recordMap.set(identity, record);
             })
-          } else {
+          } else { // is a data map
             recordMap = c(data)
               .getMap((data, identity) => {
                 if (data === undefined) {
                   return undefined;
                 }
-                return table.processData(data, identity)
+                return table.dataToRecord(data, identity)
               });
           }
           backUpTable(trans, table)

@@ -12,6 +12,7 @@ import {
 import { c } from '@wonderlandlabs/collect'
 import { JoinManager } from './JoinManager'
 import { addToIndex } from './joinUtils'
+import { TableItemClass } from './TableItemClass'
 
 
 // @TODO: put from / to relationships into manager classes
@@ -107,49 +108,55 @@ export default class Join implements JoinObj {
     return this._ftn;
   }
 
-  linkManyVia(fromIdentity: unknown,
-              dataItems: unknown[] | dataMap,
-              direction: joinDirection,
-              isPairs = false) {
-    throw new Error('TBD');
+  linkManyVia(identity: unknown,
+              toIdentities: unknown[],
+              otherDirection: joinDirection) {
+    const existing: unknown[] = ((otherDirection === 'from') ? this.from.index.get(identity)
+      : this.to.index.get(identity)) || []
+    const unsetOtherIds = toIdentities.filter((id) => !existing.includes(id));
+    const newData = otherDirection === 'from' ?
+      unsetOtherIds.map(
+        (otherId) => {
+          return {
+            [this.toTableName]: identity,
+            [this.fromTableName]: otherId
+          }
+        })
+      :
+      unsetOtherIds.map(
+        (otherId) => {
+          return {
+            [this.toTableName]: otherId,
+            [this.fromTableName]: identity
+          }
+        });
+      this.viaTable?.updateMany(newData);
   }
 
-  linkMany(fromIdentity: unknown,
-           dataItems: unknown[] | dataMap,
-           direction: joinDirection,
-           isPairs = false) {
-    const table = direction === 'from' ? this.from.table : this.to.table;
-    const config = direction === 'from' ? this.from.def : this.to.def;
-
+  linkMany(identity: unknown,
+           otherIdentities: unknown[],
+           otherDirection: joinDirection) {
+    const otherTable = otherDirection === 'from' ? this.from.table : this.to.table;
+    const otherConfig = otherDirection === 'from' ? this.from.def : this.to.def;
+    if (this.isVia) {
+      return this.linkManyVia(identity, otherIdentities, otherDirection);
+    }
     // only works when remote table is foreign key
-    if (!isFieldDef(config)) {
+    if (!isFieldDef(otherConfig)) {
       throw new Error('linkMany must target field type');
     }
-    const fieldName = config.field;
-    if (direction === 'from') {
-      if (this.strategy !== 'identity-field') {
-        throw new Error('cannot link many with this linkVia');
-      }
-    } else {
-      if (this.isVia) {
-        return this.linkManyVia(fromIdentity, dataItems, direction);
-      }
-    }
+    const fieldName = otherConfig.field;
 
-    this.base.trans.do('withBackedUpTables', [this.from.table.name, this.to.table.name],
-      () => {
-        if (isPairs) {
-          let source = Array.isArray(dataItems) ? new Map(dataItems) : dataItems;
-          table.updateMany(c(source).getMap((data: unknown) => c(data).set(fieldName, fromIdentity).value));
-        } else if (Array.isArray(dataItems)) {
-          dataItems = dataItems.map((data) => {
-            return c(data).set(fieldName, fromIdentity).value;
-          });
-          table.updateMany(dataItems);
-        } else {
-          throw new Error('bad data');
-        }
-      });
+    const dataRecord = otherIdentities.reduce((memo: dataMap, otherIdentity) => {
+      if (!otherTable.has(otherIdentity)) {
+        return memo;
+      }
+      const record = otherTable.get(otherIdentity);
+      memo.set(otherIdentity, c(record).set(fieldName, identity).value);
+      return memo;
+    }, new Map());
+
+    this.base.trans.do('updateMany', otherTable, dataRecord);
   }
 
   link(fromIdentity: unknown, toIdentity: unknown) {

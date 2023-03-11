@@ -73,14 +73,14 @@ export default class Table implements TableObj {
 
     if (config.records) {
       if (Array.isArray(config.records)) {
-        config.records.map((data: unknown) => this.processData(data))
+        config.records.map((data: unknown) => this.dataToRecord(data))
           .forEach((record: unknown) => {
             const identity = this.identityFor(record);
             this.$set(identity, record)
           });
       } else {
         c(config.records)
-          .map((data, identity) => this.processData(data, identity))
+          .map((data, identity) => this.dataToRecord(data, identity))
           .forEach((record, identity) => {
             this.$set(record, identity)
           });
@@ -96,8 +96,8 @@ export default class Table implements TableObj {
   private _testRecord: recordTestFn
   private _testTable: tableTestFn
 
-  processData(data: unknown, identity?: unknown): unknown {
-    if (identity && this.has(identity)) {
+  dataToRecord(data: unknown, identity?: unknown): unknown {
+    if (identity!== undefined && this.has(identity)) {
       return this._onUpdate(data, this, this.get(identity))
     }
     return this._onCreate(data, this);
