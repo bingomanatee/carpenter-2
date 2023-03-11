@@ -1,5 +1,5 @@
 import {
-  BaseObj, isQueryJoinDefJoinName, isQueryJoinDefTableName, JoinItem,
+  BaseObj, isQueryJoinDefJoinName, isQueryJoinDefTableName, JoinPart,
   QueryDefObj,
   QueryJoinDefObj,
   QueryObj,
@@ -66,14 +66,14 @@ export default class Query implements QueryObj {
       return;
     }
 
-    let joinItem: JoinItem | null = null
+    let joinItem: JoinPart | null = null
     if (isQueryJoinDefJoinName(joinDef)) {
       joinItem = items[0].table.joins.get(joinDef.joinName) || null;
       if (!joinItem) {
         throw new Error(`cannot retrieve join ${joinDef.joinName} from ${items[0].table.name || '<missing t>'}`);
       }
     } else if (isQueryJoinDefTableName(joinDef)) {
-      joinItem = items[0].table.$joinFromTableName(joinDef.tableName)
+      joinItem = items[0].table.$joinFromTableName(joinDef.tableName)[0]
     }
 
     if (!joinItem) {

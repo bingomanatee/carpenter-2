@@ -7,7 +7,7 @@ import {
   joinDirection,
   JoinObj,
   JoinObjType,
-  joinStrategy
+  joinStrategy, TableItemJSON
 } from './types'
 import { c } from '@wonderlandlabs/collect'
 import { JoinManager } from './JoinManager'
@@ -17,7 +17,7 @@ import { addToIndex } from './joinUtils'
 // @TODO: put from / to relationships into manager classes
 
 export default class Join implements JoinObj {
-  constructor( private config: JoinConfig, private base: BaseObj) {
+  constructor(private config: JoinConfig, private base: BaseObj) {
     this.from = new JoinManager('from', base, this.config.from, this);
     this.to = new JoinManager('to', base, this.config.to, this);
   }
@@ -59,12 +59,69 @@ export default class Join implements JoinObj {
     return 'identity-identity'
   }
 
+  detach(ref1: TableItemJSON, ref2: TableItemJSON, second?: boolean) {
+    if (this.from.table.name === ref1.t && this.to.table.name === ref2.t) {
+      this.detachIdentities(ref1.id, ref2.id);
+    } else if (!second) {
+      this.detach(ref2, ref1, true);
+    }
+  }
+
+  detachIdentities(fromIdentity: unknown, toIdentity: unknown) {
+    if (this.isVia) {
+      if (this.viaTable) {
+        for (const [identity, data] of this.viaTable.$coll.iter) {
+          const coll = c(data);
+          if (coll.get(this.fromTableName) === fromIdentity
+            && coll.get(this.toTableName) === toIdentity
+          ) {
+            this.viaTable.delete(identity);
+            break;
+          }
+        }
+      } else {
+        if (isFieldDef(this.from.def)) {
+          this.from.table.setField(fromIdentity, this.from.def.field, undefined);
+        }
+        if (isFieldDef(this.to.def)) {
+          this.to.table.setField(toIdentity, this.to.def.field, undefined);
+        }
+      }
+    }
+  }
+
+  private _ftn?: string;
+  private _ttn?: string;
+
+  get toTableName() {
+    if (!this._ttn) {
+      this._ttn = this.to.table.name;
+    }
+    return this._ttn;
+  }
+
+  get fromTableName() {
+    if (!this._ftn) {
+      this._ftn = this.from.table.name;
+    }
+    return this._ftn;
+  }
+
+  linkManyVia(fromIdentity: unknown,
+              dataItems: unknown[] | dataMap,
+              direction: joinDirection,
+              isPairs = false) {
+    throw new Error('TBD');
+  }
+
   linkMany(fromIdentity: unknown,
            dataItems: unknown[] | dataMap,
            direction: joinDirection,
            isPairs = false) {
     const table = direction === 'from' ? this.from.table : this.to.table;
     const config = direction === 'from' ? this.from.def : this.to.def;
+
+    // only works when remote table is foreign key
     if (!isFieldDef(config)) {
       throw new Error('linkMany must target field type');
     }
@@ -74,8 +131,8 @@ export default class Join implements JoinObj {
         throw new Error('cannot link many with this linkVia');
       }
     } else {
-      if (this.strategy !== 'field-identity') {
-        throw new Error('cannot link many with this linkVia');
+      if (this.isVia) {
+        return this.linkManyVia(fromIdentity, dataItems, direction);
       }
     }
 

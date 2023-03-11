@@ -1,5 +1,5 @@
 import { dataMap, joinDirection } from "./basic";
-import { TableItem, TableObj } from './tables'
+import { TableItem, TableItemJSON, TableObj } from './tables'
 
 type BaseJoinDef = {
   table: string,
@@ -54,7 +54,7 @@ export function isJoinTermTableNameBase(arg: unknown): arg is JoinTermTableNameB
 
 type JoinTermJoinNameBase = { joinName: string }
 type JoinTermTableNameBase = { tableName: string }
-type JoinTermBase = JoinTermJoinNameBase | JoinTermTableNameBase;
+type JoinTermContextBase = JoinTermJoinNameBase | JoinTermTableNameBase;
 
 type JoinTermIdentityDataBase = { identity: unknown, data: unknown }
 
@@ -110,11 +110,11 @@ type JoinTermTargetBase = JoinTermIdentityDataBase
   | JoinTermDatasBase
   | JoinTermDataPairsBase
 
-export type JoinTerm = JoinTermBase & JoinTermTargetBase;
+export type JoinTerm = JoinTermContextBase & JoinTermTargetBase;
 
 export type joinsMap = Map<string, TableItem[]>
 
-export type JoinItem = {
+export type JoinPart = {
   join: JoinObj,
   direction: joinDirection
 }
@@ -125,24 +125,27 @@ export type JoinManagerObj = {
   indexReverse: dataMap,
   def: JoinDef,
   table: TableObj,
-  isIdentity: boolean
+  isIdentity: boolean,
   purgeIndexes(): void,
   records(identity: unknown): unknown[],
   identities(identity: unknown): unknown[]
 }
 
 export interface JoinObj {
+  readonly fromTableName: string,
+  readonly toTableName: string,
   name: string
   $type: JoinObjType,
-    isVia: boolean,
-    indexVia(): void,
-    purgeIndexes(): void,
-    link(id1: unknown, id2: unknown): void,
-    linkMany(fromIdentity: unknown, dataItems: unknown[] | dataMap,
-    direction: joinDirection,
-    isPairs?: boolean): void
-    from: JoinManagerObj,
-    to: JoinManagerObj,
+  isVia: boolean,
+  indexVia(): void,
+  purgeIndexes(): void,
+  link(id1: unknown, id2: unknown): void,
+  detach(ref1: TableItemJSON, ref2: TableItemJSON, second?: boolean): void;
+  linkMany(fromIdentity: unknown, dataItems: unknown[] | dataMap,
+           direction: joinDirection,
+           isPairs?: boolean): void
+  from: JoinManagerObj,
+  to: JoinManagerObj,
 }
 
 export function isJoin(arg: unknown): arg is JoinObj {

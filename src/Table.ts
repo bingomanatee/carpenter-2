@@ -7,7 +7,7 @@ import {
   identityConfigFn,
   isJoinTermJoinNameBase,
   isJoinTermTableNameBase,
-  JoinItem,
+  JoinPart,
   JoinObj,
   JoinTerm,
   mutatorFn,
@@ -22,7 +22,7 @@ import {
   TableItem,
   tableItemFilter,
   TableObj,
-  tableTestFn
+  tableTestFn, TableItemJSON
 } from './types'
 import { c } from '@wonderlandlabs/collect'
 import { generalObj } from '@wonderlandlabs/collect/lib/types'
@@ -103,7 +103,7 @@ export default class Table implements TableObj {
     return this._onCreate(data, this);
   }
 
-  private _joins?: Map<string, JoinItem>
+  private _joins?: Map<string, JoinPart>
   get joins() {
     if (!this._joins) {
       this._joins = new Map();
@@ -146,8 +146,8 @@ export default class Table implements TableObj {
     this.trans.do('join', this, identity, joinTerm);
   }
 
-  public detach(identity: unknown, otherIdentities: unknown) {
-    this.trans.do('detach', this, identity, otherIdentities);
+  public detach(identity: unknown, other: TableItemJSON, joinName?: string) {
+    this.trans.do('detach', { t: this.name, id: identity, v: this.get(identity) }, other, joinName);
   }
 
   public delete(identity: unknown) {
@@ -156,6 +156,10 @@ export default class Table implements TableObj {
 
   add(record: unknown, identity?: unknown, replace = false) {
     this.trans.do('add', this, record, identity, replace)
+  }
+
+  purgeIndexes() {
+    this.joins.forEach((part: JoinPart) => part.join.purgeIndexes());
   }
 
   /**
@@ -314,11 +318,11 @@ export default class Table implements TableObj {
     return this._testTable(this);
   }
 
-  $joinFromTerm(term: JoinTerm): JoinItem | null {
+  $joinFromTerm(term: JoinTerm, allowMultiple = false): JoinPart[] {
     if (isJoinTermJoinNameBase(term)) {
       const joinItem = this.joins.get(term.joinName);
       if (joinItem) {
-        return joinItem;
+        return [joinItem];
       }
     } else if (isJoinTermTableNameBase(term)) {
       // @TODO: detect self-$
@@ -326,12 +330,12 @@ export default class Table implements TableObj {
 
       return this.$joinFromTableName(tableName);
     }
-    return null;
+    return [];
   }
 
-  $joinFromTableName(tableName: string) {
+  $joinFromTableName(tableName: string, allowMultiple = false) {
     // requesting a match to the other side of the JoinTerm
-    let matches = Array.from(this.joins.values()).filter((joinItem: JoinItem) => {
+    let matches = Array.from(this.joins.values()).filter((joinItem: JoinPart) => {
       return (
         (joinItem.join.from.table.name === this.name
           || joinItem.join.to.table.name === tableName)
@@ -341,12 +345,12 @@ export default class Table implements TableObj {
       );
     });
 
-    if (matches.length === 1) {
-      return matches[0];
-    }
     if (matches.length > 1) {
+      if (allowMultiple) {
+        return matches;
+      }
       throw new Error('multiple $ for ' + tableName + 'from ' + this.name);
     }
-    return null;
+    return matches;
   }
 }

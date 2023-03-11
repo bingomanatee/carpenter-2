@@ -9,7 +9,7 @@ import {
   StringKeyRecord,
 } from './basic'
 import { collectObj } from '@wonderlandlabs/collect/lib/types'
-import { JoinItem, JoinObj, JoinTerm } from './joins'
+import { JoinPart, JoinObj, JoinTerm } from './joins'
 import { BaseObj, QueryObj, TableQueryDefObj } from '../types'
 
 export type recordTestValue = false | null | void | undefined | string
@@ -45,7 +45,7 @@ export interface TableObj {
   coll: collectObj // a clone of the record collection
   identityFor: identityFn
   size: number
-  readonly joins: Map<string, JoinItem>
+  readonly joins: Map<string, JoinPart>
   // these are internal operations, not to be called externally
   $records: dataMap
   readonly $coll: collectObj
@@ -67,12 +67,13 @@ export interface TableObj {
   forEach(en: enumerator): void
   query(queryDef: TableQueryDefObj): QueryObj;
   queryFor(identity: unknown, queryDef: TableQueryDefObj): QueryObj;
+  purgeIndexes(): void;
 
   $set(identity: unknown, record: unknown): void
   $testTable(): unknown
-  $joinFromTerm(term: JoinTerm): JoinItem | null
+  $joinFromTerm(term: JoinTerm, allowMultiple?: boolean): JoinPart[]
   $clearJoins(): void;
-  $joinFromTableName(name: string): JoinItem | null
+  $joinFromTableName(name: string, allowMultiple?: boolean): JoinPart[]
 }
 
 // -------- TableItems
@@ -82,6 +83,16 @@ export type TableItemBase = {
 }
 
 export type tableItemJSONJoinRecord = Record<string, TableItemJSON[]>
+
+export function isTableItemJSON(arg: unknown): arg is TableItemJSON {
+  return !!(
+    arg &&
+    typeof arg === 'object' &&
+    't' in arg &&
+    'id' in arg
+  );
+}
+
 export type TableItemJSON = {
   $?: tableItemJSONJoinRecord
   t: string
@@ -89,6 +100,16 @@ export type TableItemJSON = {
 } & TableItemBase
 
 export type tableItemJoinMap = Map<string, TableItem[]>;
+
+export function isTableItem(arg: unknown): arg is TableItem {
+  return !!(
+    arg &&
+    typeof arg === 'object' &&
+    'table' in arg &&
+    'identity' in arg
+  );
+}
+
 export type TableItem = {
   readonly data: unknown,
   readonly exists: boolean,
